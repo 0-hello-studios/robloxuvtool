@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UV FORGE</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --bg:      #080808;
+  --panel:   #101010;
+  --panel2:  #161616;
+  --hover:   #1c1c1c;
+  --border:  #242424;
+  --borderB: #333;
+  --accent:  #00e5ff;
+  --accentD: #00b8cc;
+  --accentG: rgba(0,229,255,.12);
+  --txt:     #e0e0e0;
+  --txt2:    #777;
+  --txt3:    #444;
+  --ok:      #39ff6e;
+  --warn:    #ffb800;
+  --err:     #ff3b3b;
+  --mono:    'Space Mono', monospace;
+  --ui:      'Rajdhani', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ui)}
+button{font-family:var(--ui);cursor:pointer;border:none;outline:none;transition:opacity .15s}
+button:hover{opacity:.85}
+button:active{opacity:.7}
+input[type=range]{accent-color:var(--accent);cursor:pointer;width:100%}
+input[type=color]{cursor:pointer;border:none;background:none;padding:0}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--borderB);border-radius:2px}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;width:100vw;height:100vh}
+
+/* ── TOOLBAR ── */
+#toolbar{
+  height:48px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;
+}
+#logo{
+  font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);
+  letter-spacing:.2em;margin-right:14px;display:flex;align-items:center;gap:6px;
+}
+#logo span{opacity:.4;font-size:9px}
+.divider{width:1px;height:22px;background:var(--border);margin:0 4px}
+.tb-btn{
+  display:flex;align-items:center;gap:5px;padding:5px 11px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;border-radius:2px;
+  background:var(--hover);color:var(--txt2);border:1px solid var(--border);
+}
+.tb-btn.accent{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
+.tb-btn.danger{background:rgba(255,59,59,.08);color:var(--err);border-color:rgba(255,59,59,.25)}
+.tb-btn.active{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
+.tb-btn:disabled{opacity:.4;cursor:not-allowed}
+#status-bar{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 10px}
+#status-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);transition:all .3s;flex-shrink:0}
+#status-txt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.06em;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;overflow:hidden}
+#viewport-area{flex:1;position:relative;overflow:hidden}
+#view-3d,#view-uv,#view-split{position:absolute;inset:0;display:none}
+#view-3d.active,#view-uv.active,#view-split.active{display:flex}
+#view-split{gap:0}
+#view-split #canvas3d-wrap{flex:1;border-right:1px solid var(--border)}
+#view-split #uv-wrap-split{flex:1}
+
+/* ── 3D VIEWPORT ── */
+#canvas3d-wrap{position:relative;width:100%;height:100%}
+#canvas3d{display:block;width:100%;height:100%}
+#no-mesh-hint{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;pointer-events:none
+}
+#no-mesh-hint .hint-icon{font-size:32px;opacity:.15}
+#no-mesh-hint .hint-txt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em}
+
+/* ── UV EDITOR ── */
+#uv-wrap,#uv-wrap-split{
+  width:100%;height:100%;display:flex;flex-direction:column;background:var(--bg)
+}
+#uv-toolbar{
+  height:36px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0
+}
+#uv-toolbar .uv-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:4px}
+.uv-btn{
+  padding:3px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  background:var(--hover);color:var(--txt2);border:1px solid var(--border);border-radius:2px
+}
+.uv-btn.accent{background:var(--accent);color:#000;font-weight:700;border-color:var(--accent)}
+#uv-zoom-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto}
+#uv-canvas-area{
+  flex:1;overflow:hidden;position:relative;cursor:crosshair
+}
+#uv-stage{
+  position:absolute;transform-origin:0 0
+}
+#uv-stage canvas{position:absolute;top:0;left:0}
+#no-uv-hint{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none
+}
+
+/* ── INSPECTOR ── */
+#inspector{
+  width:210px;height:100%;background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto
+}
+.sec{border-bottom:1px solid var(--border);padding:10px 12px}
+.sec-title{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.14em;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.row-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3)}
+.row-val{font-family:var(--mono);font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.row-val.ok{color:var(--ok)}
+.field-lbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.08em;margin-bottom:6px}
+.mode-row{display:flex;gap:6px;margin-bottom:12px}
+.mode-btn{
+  flex:1;padding:5px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+  background:var(--bg);color:var(--txt3);border:1px solid var(--border);border-radius:2px
+}
+.mode-btn.active{background:var(--accentG);color:var(--accent);border-color:var(--accent)}
+#color-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+#color-pick{width:34px;height:26px;border:1px solid var(--border);border-radius:2px}
+#color-hex{
+  flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;
+  font-size:10px;font-family:var(--mono);color:var(--txt2);border-radius:2px
+}
+#brush-val{float:right;color:var(--accent)}
+.palette{display:flex;flex-wrap:wrap;gap:4px}
+.swatch{width:23px;height:23px;border-radius:2px;cursor:pointer;border:1px solid var(--border)}
+.swatch.active{border:2px solid var(--accent)}
+#inspector-foot{
+  margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px
+}
+#foot-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
+#foot-txt{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.06em}
+
+/* ── DROP HINT ── */
+#drop-hint{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--border);border-radius:3px;
+  padding:7px 18px;pointer-events:none;transition:opacity .3s
+}
+#drop-hint span{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em}
+
+/* ── SPINNER ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{
+  width:8px;height:8px;border:1.5px solid var(--warn);border-top-color:transparent;
+  border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0
+}
+
+/* ── DROP OVERLAY ── */
+#drop-overlay{
+  position:fixed;inset:0;background:rgba(0,229,255,.05);
+  border:2px solid var(--accent);display:none;z-index:100;
+  align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:.2em
+}
+#drop-overlay.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <div id="logo"><span>◈</span> UV FORGE</div>
+    <div class="divider"></div>
+    <input type="file" id="file-input" accept=".obj,.glb" style="display:none"/>
+    <button class="tb-btn" id="btn-load" onclick="document.getElementById('file-input').click()">
+      ⬡ LOAD MESH
+    </button>
+    <button class="tb-btn accent" id="btn-unwrap" disabled onclick="doUnwrap()">
+      ⊞ AUTO UNWRAP
+    </button>
+    <div class="divider"></div>
+    <button class="tb-btn active" id="btn-3d"    onclick="setView('3d')">3D</button>
+    <button class="tb-btn"        id="btn-uv"    onclick="setView('uv')">UV</button>
+    <button class="tb-btn"        id="btn-split" onclick="setView('split')">SPLIT</button>
+    <div id="status-bar">
+      <div id="status-dot"></div>
+      <div id="status-txt">Drop a mesh to begin</div>
+    </div>
+    <div class="divider"></div>
+    <button class="tb-btn danger" id="btn-reset" style="display:none" onclick="resetAll()">✕ RESET</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="viewport-area">
+
+      <!-- 3D VIEW -->
+      <div id="view-3d" class="active">
+        <div id="canvas3d-wrap">
+          <canvas id="canvas3d"></canvas>
+          <div id="no-mesh-hint">
+            <div class="hint-icon">⬡</div>
+            <div class="hint-txt">NO MESH LOADED</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UV VIEW -->
+      <div id="view-uv">
+        <div id="uv-wrap">
+          <div id="uv-toolbar">
+            <span class="uv-lbl">UV</span>
+            <button class="uv-btn" onclick="uvFill()">FILL</button>
+            <button class="uv-btn" onclick="uvClear()">CLEAR</button>
+            <span id="uv-zoom-lbl">ZOOM 100%</span>
+            <button class="uv-btn accent" onclick="uvExport()">EXPORT PNG</button>
+          </div>
+          <div id="uv-canvas-area" id="uv-area-main">
+            <div id="uv-stage">
+              <canvas id="checker-canvas"></canvas>
+              <canvas id="paint-canvas"></canvas>
+              <canvas id="wire-canvas"></canvas>
+            </div>
+            <div id="no-uv-hint">NO UV DATA</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPLIT VIEW -->
+      <div id="view-split">
+        <div id="canvas3d-wrap-split" style="flex:1;position:relative;border-right:1px solid var(--border)">
+          <!-- 3D shared via clone trick - we'll just reuse renderer -->
+        </div>
+        <div id="uv-wrap-split">
+          <div id="uv-toolbar-split" style="height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0">
+            <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:4px">UV</span>
+            <button class="uv-btn" onclick="uvFill()">FILL</button>
+            <button class="uv-btn" onclick="uvClear()">CLEAR</button>
+            <span id="uv-zoom-lbl-split" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto">ZOOM 100%</span>
+            <button class="uv-btn accent" onclick="uvExport()">EXPORT PNG</button>
+          </div>
+          <div id="uv-canvas-area-split" style="flex:1;overflow:hidden;position:relative;cursor:crosshair">
+            <div id="uv-stage-split">
+              <canvas id="checker-canvas-split"></canvas>
+              <canvas id="paint-canvas-split"></canvas>
+              <canvas id="wire-canvas-split"></canvas>
+            </div>
+            <div id="no-uv-hint-split" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none">NO UV DATA</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INSPECTOR -->
+    <div id="inspector">
+      <div class="sec">
+        <div class="sec-title">MESH</div>
+        <div class="row"><span class="row-lbl">FILE</span><span class="row-val" id="info-file">—</span></div>
+        <div class="row"><span class="row-lbl">VERTS</span><span class="row-val" id="info-verts">—</span></div>
+        <div class="row"><span class="row-lbl">TRIS</span><span class="row-val" id="info-tris">—</span></div>
+        <div class="row"><span class="row-lbl">UVS</span><span class="row-val" id="info-uvs">NONE</span></div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">BRUSH</div>
+        <div class="mode-row">
+          <button class="mode-btn active" id="mode-paint" onclick="setMode('paint')">PAINT</button>
+          <button class="mode-btn"        id="mode-erase" onclick="setMode('erase')">ERASE</button>
+        </div>
+        <div class="field-lbl">COLOR</div>
+        <div id="color-row">
+          <input type="color" id="color-pick" value="#ffffff" oninput="onColorChange(this.value)"/>
+          <div id="color-hex">#FFFFFF</div>
+        </div>
+        <div class="field-lbl">BRUSH SIZE — <span id="brush-val">20</span>px</div>
+        <input type="range" id="brush-size" min="1" max="120" value="20" oninput="onBrushChange(this.value)"/>
+      </div>
+      <div class="sec">
+        <div class="sec-title">PALETTE</div>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div id="inspector-foot">
+        <div id="foot-dot"></div>
+        <div id="foot-txt">NO UVS</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DROP OVERLAY -->
+<div id="drop-overlay">DROP MESH HERE</div>
+
+<!-- DROP HINT -->
+<div id="drop-hint"><span>DROP OBJ / GLB  ·  OR USE LOAD MESH</span></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const S = {
+  mesh: null,
+  meshName: null,
+  hasUVs: false,
+  color: '#ffffff',
+  brushSize: 20,
+  mode: 'paint',   // 'paint' | 'erase'
+  activeView: '3d',
+  loading: false,
+}
+
+const UV_SIZE = 1024
+
+// ═══════════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════════
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true })
+renderer.setPixelRatio(devicePixelRatio)
+renderer.setClearColor(0x0d0d0d)
+renderer.shadowMap.enabled = true
+
+const scene = new THREE.Scene()
+scene.add(new THREE.GridHelper(10, 20, 0x1a1a1a, 0x141414))
+scene.add(new THREE.AmbientLight(0xffffff, 0.45))
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6)
+keyLight.position.set(3, 5, 4)
+scene.add(keyLight)
+const fillLight = new THREE.DirectionalLight(0x8899ff, 0.4)
+fillLight.position.set(-4, 2, -3)
+scene.add(fillLight)
+const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.25)
+rimLight.position.set(0, -2, -5)
+scene.add(rimLight)
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000)
+camera.position.set(0, 2, 5)
+
+// Orbit controls (inline — no addons needed)
+const orbit = (() => {
+  const el = renderer.domElement
+  let down = false, px = 0, py = 0
+  let theta = 0.4, phi = 1.1, radius = 5
+  const target = new THREE.Vector3()
+
+  el.addEventListener('mousedown', e => { if (e.button === 0) { down = true; px = e.clientX; py = e.clientY } })
+  window.addEventListener('mouseup', () => down = false)
+  window.addEventListener('mousemove', e => {
+    if (!down) return
+    const dx = e.clientX - px, dy = e.clientY - py
+    theta -= dx * 0.005; phi -= dy * 0.005
+    phi = Math.max(0.05, Math.min(Math.PI - 0.05, phi))
+    px = e.clientX; py = e.clientY
+  })
+  el.addEventListener('wheel', e => { radius = Math.max(0.5, Math.min(50, radius + e.deltaY * 0.01)) }, { passive: true })
+  el.addEventListener('contextmenu', e => e.preventDefault())
+
+  let rmx = 0, rmy = 0, rmdown = false
+  el.addEventListener('mousedown', e => { if (e.button === 2) { rmdown = true; rmx = e.clientX; rmy = e.clientY } })
+  window.addEventListener('mousemove', e => {
+    if (!rmdown) return
+    const dx = (e.clientX - rmx) * 0.005
+    const dy = (e.clientY - rmy) * 0.005
+    target.x -= dx * radius * 0.3
+    target.y += dy * radius * 0.3
+    rmx = e.clientX; rmy = e.clientY
+  })
+  window.addEventListener('mouseup', () => rmdown = false)
+
+  return {
+    update() {
+      camera.position.x = target.x + radius * Math.sin(phi) * Math.sin(theta)
+      camera.position.y = target.y + radius * Math.cos(phi)
+      camera.position.z = target.z + radius * Math.sin(phi) * Math.cos(theta)
+      camera.lookAt(target)
+    },
+    reset(dist = 4) { radius = dist; theta = 0.4; phi = 1.1; target.set(0,0,0) }
+  }
+})()
+
+let meshObj = null
+let bakedMat = null
+
+function animate() {
+  requestAnimationFrame(animate)
+  orbit.update()
+
+  // Resize renderer to current container
+  const wrap = S.activeView === 'split'
+    ? document.getElementById('canvas3d-wrap-split')
+    : document.getElementById('canvas3d-wrap')
+
+  if (wrap) {
+    const w = wrap.clientWidth, h = wrap.clientHeight
+    if (renderer.domElement.width !== w * devicePixelRatio || renderer.domElement.height !== h * devicePixelRatio) {
+      renderer.setSize(w, h)
+      camera.aspect = w / h
+      camera.updateProjectionMatrix()
+    }
+
+    // Move canvas to correct container
+    if (renderer.domElement.parentElement !== wrap) {
+      wrap.appendChild(renderer.domElement)
+    }
+  }
+
+  renderer.render(scene, camera)
+}
+animate()
+
+// ═══════════════════════════════════════════════════════════════
+// MESH LOADING
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('file-input').addEventListener('change', async e => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (file) await loadFile(file)
+})
+
+async function loadFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  if (!['obj','glb','gltf'].includes(ext)) { setStatus(`Unsupported: .${ext}`, 'error'); return }
+  setStatus(`Loading ${file.name}...`, 'loading')
+  try {
+    const geo = await parseFile(file, ext)
+    setGeometry(geo, file.name)
+    setStatus(`Loaded: ${file.name}`, 'ok')
+  } catch(err) {
+    setStatus(`Error: ${err.message}`, 'error')
+  }
+}
+
+function parseFile(file, ext) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    if (ext === 'obj') {
+      reader.onload = e => {
+        try { resolve(parseOBJ(e.target.result)) }
+        catch(err) { reject(err) }
+      }
+      reader.onerror = () => reject(new Error('File read failed'))
+      reader.readAsText(file)
+    } else {
+      reader.onload = e => {
+        try { resolve(parseGLB(e.target.result)) }
+        catch(err) { reject(err) }
+      }
+      reader.onerror = () => reject(new Error('File read failed'))
+      reader.readAsArrayBuffer(file)
+    }
+  })
+}
+
+// Minimal OBJ parser
+function parseOBJ(text) {
+  const positions = [], uvs = [], normals = []
+  const posIdx = [], uvIdx = [], normIdx = []
+
+  for (const line of text.split('\n')) {
+    const parts = line.trim().split(/\s+/)
+    if (parts[0] === 'v')  positions.push(+parts[1], +parts[2], +parts[3])
+    if (parts[0] === 'vt') uvs.push(+parts[1], +parts[2])
+    if (parts[0] === 'vn') normals.push(+parts[1], +parts[2], +parts[3])
+    if (parts[0] === 'f') {
+      const verts = parts.slice(1).map(p => p.split('/').map(x => +x - 1))
+      for (let i = 1; i < verts.length - 1; i++) {
+        for (const v of [verts[0], verts[i], verts[i+1]]) {
+          posIdx.push(v[0])
+          uvIdx.push(v[1] ?? -1)
+          normIdx.push(v[2] ?? -1)
+        }
+      }
+    }
+  }
+
+  const count = posIdx.length
+  const pos  = new Float32Array(count * 3)
+  const uv   = uvs.length ? new Float32Array(count * 2) : null
+  const norm = normals.length ? new Float32Array(count * 3) : null
+
+  for (let i = 0; i < count; i++) {
+    const pi = posIdx[i]
+    pos[i*3]   = positions[pi*3]
+    pos[i*3+1] = positions[pi*3+1]
+    pos[i*3+2] = positions[pi*3+2]
+    if (uv && uvIdx[i] >= 0) {
+      uv[i*2]   = uvs[uvIdx[i]*2]
+      uv[i*2+1] = uvs[uvIdx[i]*2+1]
+    }
+    if (norm && normIdx[i] >= 0) {
+      norm[i*3]   = normals[normIdx[i]*3]
+      norm[i*3+1] = normals[normIdx[i]*3+1]
+      norm[i*3+2] = normals[normIdx[i]*3+2]
+    }
+  }
+
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+  if (uv)   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  if (norm) geo.setAttribute('normal', new THREE.BufferAttribute(norm, 3))
+  else geo.computeVertexNormals()
+  return geo
+}
+
+// Minimal GLB parser (binary GLTF)
+function parseGLB(buffer) {
+  const view = new DataView(buffer)
+  // magic check
+  if (view.getUint32(0, true) !== 0x46546C67) throw new Error('Not a valid GLB file')
+  const jsonLen = view.getUint32(12, true)
+  const jsonStr = new TextDecoder().decode(new Uint8Array(buffer, 20, jsonLen))
+  const gltf = JSON.parse(jsonStr)
+  const binOffset = 20 + jsonLen + 8
+  const bin = buffer.slice(binOffset)
+
+  function getAccessor(idx) {
+    const acc = gltf.accessors[idx]
+    const bv  = gltf.bufferViews[acc.bufferView]
+    const byteOffset = (bv.byteOffset || 0) + (acc.byteOffset || 0)
+    const compCount = { SCALAR:1, VEC2:2, VEC3:3, VEC4:4, MAT4:16 }[acc.type]
+    const TypedArr = acc.componentType === 5126 ? Float32Array
+                   : acc.componentType === 5123 ? Uint16Array
+                   : acc.componentType === 5125 ? Uint32Array : Float32Array
+    return new TypedArr(bin, byteOffset, acc.count * compCount)
+  }
+
+  const mesh = gltf.meshes[0]
+  const prim = mesh.primitives[0]
+  const posData  = getAccessor(prim.attributes.POSITION)
+  const normData = prim.attributes.NORMAL !== undefined ? getAccessor(prim.attributes.NORMAL) : null
+  const uvData   = prim.attributes.TEXCOORD_0 !== undefined ? getAccessor(prim.attributes.TEXCOORD_0) : null
+  const idxData  = prim.indices !== undefined ? getAccessor(prim.indices) : null
+
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posData), 3))
+  if (normData) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normData), 3))
+  if (uvData)   geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvData), 2))
+  if (idxData)  geo.setIndex(new THREE.BufferAttribute(new Uint32Array(idxData), 1))
+  if (!normData) geo.computeVertexNormals()
+  return geo
+}
+
+function setGeometry(geo, name) {
+  // Normalize
+  geo.computeBoundingBox()
+  const box = geo.boundingBox
+  const c = new THREE.Vector3(); box.getCenter(c)
+  geo.translate(-c.x, -c.y, -c.z)
+  const sz = new THREE.Vector3(); box.getSize(sz)
+  const maxD = Math.max(sz.x, sz.y, sz.z)
+  if (maxD > 0) { const s = 2/maxD; geo.scale(s,s,s) }
+
+  // Remove old mesh
+  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose() }
+
+  bakedMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.65, metalness: 0.08, side: THREE.DoubleSide })
+  meshObj = new THREE.Mesh(geo, bakedMat)
+  scene.add(meshObj)
+
+  S.mesh = geo
+  S.meshName = name
+  S.hasUVs = !!geo.attributes.uv
+
+  orbit.reset(3.5)
+
+  // Update UI
+  document.getElementById('no-mesh-hint').style.display = 'none'
+  document.getElementById('drop-hint').style.display = 'none'
+  document.getElementById('btn-unwrap').disabled = false
+  document.getElementById('btn-reset').style.display = ''
+  document.getElementById('info-file').textContent = name
+  const verts = geo.attributes.position.count
+  const tris = geo.index ? geo.index.count / 3 : verts / 3
+  document.getElementById('info-verts').textContent = verts.toLocaleString()
+  document.getElementById('info-tris').textContent = Math.round(tris).toLocaleString()
+  updateUVInfo()
+  drawUVWire()
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UV UNWRAP (spherical + planar projection — no WASM needed)
+// ═══════════════════════════════════════════════════════════════
+function doUnwrap() {
+  if (!S.mesh) return
+  setStatus('Generating UVs...', 'loading')
+  document.getElementById('btn-unwrap').disabled = true
+
+  setTimeout(() => {
+    try {
+      const geo = S.mesh
+      const pos = geo.attributes.position
+      const count = pos.count
+      const uvArr = new Float32Array(count * 2)
+
+      // Compute bounds for normalization
+      geo.computeBoundingBox()
+      const box = geo.boundingBox
+      const center = new THREE.Vector3(); box.getCenter(center)
+      const size = new THREE.Vector3(); box.getSize(size)
+
+      // Spherical UV projection
+      for (let i = 0; i < count; i++) {
+        const x = pos.getX(i) - center.x
+        const y = pos.getY(i) - center.y
+        const z = pos.getZ(i) - center.z
+        const len = Math.sqrt(x*x + y*y + z*z) || 1
+        const nx = x/len, ny = y/len, nz = z/len
+        uvArr[i*2]   = 0.5 + Math.atan2(nz, nx) / (2 * Math.PI)
+        uvArr[i*2+1] = 0.5 - Math.asin(Math.max(-1, Math.min(1, ny))) / Math.PI
+      }
+
+      geo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2))
+      S.hasUVs = true
+
+      updateUVInfo()
+      drawUVWire()
+      drawChecker('checker-canvas')
+      drawChecker('checker-canvas-split')
+      setStatus('UVs generated (spherical)', 'ok')
+      setView('uv')
+    } catch(err) {
+      setStatus(`Unwrap failed: ${err.message}`, 'error')
+    }
+    document.getElementById('btn-unwrap').disabled = false
+  }, 50)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UV EDITOR
+// ═══════════════════════════════════════════════════════════════
+let uvZoom = 1, uvPan = { x: 0, y: 0 }
+let uvPainting = false, uvPanning = false
+let uvLastPos = null, uvPanStart = null
+
+function drawChecker(id) {
+  const canvas = document.getElementById(id)
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const s = 32
+  for (let r = 0; r < UV_SIZE/s; r++) {
+    for (let c = 0; c < UV_SIZE/s; c++) {
+      ctx.fillStyle = (r+c)%2===0 ? '#1a1a1a' : '#141414'
+      ctx.fillRect(c*s, r*s, s, s)
+    }
+  }
+}
+
+function drawUVWire() {
+  for (const id of ['wire-canvas','wire-canvas-split']) {
+    const canvas = document.getElementById(id)
+    if (!canvas) continue
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0,0,UV_SIZE,UV_SIZE)
+    if (!S.mesh || !S.mesh.attributes.uv) continue
+    const uv = S.mesh.attributes.uv
+    const index = S.mesh.index
+    ctx.strokeStyle = 'rgba(0,229,255,.65)'
+    ctx.lineWidth = 0.7
+    ctx.beginPath()
+    const drawTri = (a,b,c) => {
+      ctx.moveTo(uv.getX(a)*UV_SIZE, (1-uv.getY(a))*UV_SIZE)
+      ctx.lineTo(uv.getX(b)*UV_SIZE, (1-uv.getY(b))*UV_SIZE)
+      ctx.lineTo(uv.getX(c)*UV_SIZE, (1-uv.getY(c))*UV_SIZE)
+      ctx.closePath()
+    }
+    if (index) {
+      for (let i = 0; i < index.count; i+=3) drawTri(index.getX(i), index.getX(i+1), index.getX(i+2))
+    } else {
+      for (let i = 0; i < uv.count; i+=3) drawTri(i, i+1, i+2)
+    }
+    ctx.stroke()
+  }
+  document.getElementById('no-uv-hint').style.display = 'none'
+  if (document.getElementById('no-uv-hint-split'))
+    document.getElementById('no-uv-hint-split').style.display = 'none'
+}
+
+function updateStageTransform(suffix = '') {
+  const s = suffix ? '-'+suffix : ''
+  const stage = document.getElementById('uv-stage' + (suffix ? '-split' : ''))
+  const area  = document.getElementById('uv-canvas-area' + (suffix ? '-split' : ''))
+  if (!stage || !area) return
+  const w = area.clientWidth, h = area.clientHeight
+  const cx = w/2 - (UV_SIZE*uvZoom)/2 + uvPan.x
+  const cy = h/2 - (UV_SIZE*uvZoom)/2 + uvPan.y
+  stage.style.transform = `translate(${cx}px,${cy}px) scale(${uvZoom})`
+  stage.style.width  = UV_SIZE + 'px'
+  stage.style.height = UV_SIZE + 'px'
+  const zlbl = document.getElementById('uv-zoom-lbl' + (suffix ? '-split' : ''))
+  if (zlbl) zlbl.textContent = 'ZOOM ' + Math.round(uvZoom*100) + '%'
+}
+
+function initUVArea(areaId, stageId) {
+  const area = document.getElementById(areaId)
+  if (!area) return
+  const isSplit = areaId.includes('split')
+
+  area.addEventListener('mousedown', e => {
+    if (e.button === 1 || e.altKey) {
+      uvPanning = true
+      uvPanStart = { x: e.clientX - uvPan.x, y: e.clientY - uvPan.y }
+      return
+    }
+    uvPainting = true
+    uvLastPos = null
+    uvPaint(e, isSplit)
+  })
+  area.addEventListener('mousemove', e => {
+    if (uvPanning && uvPanStart) {
+      uvPan.x = e.clientX - uvPanStart.x
+      uvPan.y = e.clientY - uvPanStart.y
+      updateStageTransform(isSplit ? 'split' : '')
+      return
+    }
+    if (uvPainting) uvPaint(e, isSplit)
+  })
+  area.addEventListener('mouseup',    () => { uvPainting = false; uvPanning = false; uvLastPos = null })
+  area.addEventListener('mouseleave', () => { uvPainting = false; uvPanning = false; uvLastPos = null })
+  area.addEventListener('wheel', e => {
+    e.preventDefault()
+    uvZoom = Math.max(0.2, Math.min(10, uvZoom - e.deltaY * 0.001))
+    updateStageTransform()
+    updateStageTransform('split')
+  }, { passive: false })
+}
+
+function uvPaint(e, isSplit) {
+  const paintId = isSplit ? 'paint-canvas-split' : 'paint-canvas'
+  const mirrorId = isSplit ? 'paint-canvas' : 'paint-canvas-split'
+  const canvas = document.getElementById(paintId)
+  if (!canvas) return
+  const stageId = isSplit ? 'uv-stage-split' : 'uv-stage'
+  const stage = document.getElementById(stageId)
+  const stageRect = stage.getBoundingClientRect()
+  const x = (e.clientX - stageRect.left) * (UV_SIZE / (stageRect.width))
+  const y = (e.clientY - stageRect.top)  * (UV_SIZE / (stageRect.height))
+
+  const ctx = canvas.getContext('2d')
+  ctx.globalCompositeOperation = S.mode === 'erase' ? 'destination-out' : 'source-over'
+  ctx.strokeStyle = S.color
+  ctx.lineWidth = S.brushSize
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+
+  if (uvLastPos) {
+    ctx.beginPath(); ctx.moveTo(uvLastPos.x, uvLastPos.y); ctx.lineTo(x, y); ctx.stroke()
+  } else {
+    ctx.beginPath(); ctx.arc(x, y, S.brushSize/2, 0, Math.PI*2)
+    ctx.fillStyle = S.mode === 'erase' ? 'rgba(0,0,0,1)' : S.color
+    ctx.fill()
+  }
+  uvLastPos = { x, y }
+
+  // Mirror to other canvas
+  const mirror = document.getElementById(mirrorId)
+  if (mirror) {
+    const mctx = mirror.getContext('2d')
+    mctx.clearRect(0,0,UV_SIZE,UV_SIZE)
+    mctx.drawImage(canvas, 0, 0)
+  }
+
+  // Apply to 3D mesh as texture
+  applyPaintToMesh(canvas)
+}
+
+function applyPaintToMesh(canvas) {
+  if (!bakedMat) return
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.flipY = false
+  bakedMat.map = tex
+  bakedMat.color.set(0xffffff)
+  bakedMat.needsUpdate = true
+}
+
+function uvFill() {
+  for (const id of ['paint-canvas','paint-canvas-split']) {
+    const canvas = document.getElementById(id)
+    if (!canvas) continue
+    const ctx = canvas.getContext('2d')
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.fillStyle = S.color
+    ctx.fillRect(0,0,UV_SIZE,UV_SIZE)
+  }
+  applyPaintToMesh(document.getElementById('paint-canvas'))
+}
+
+function uvClear() {
+  for (const id of ['paint-canvas','paint-canvas-split']) {
+    const canvas = document.getElementById(id)
+    if (!canvas) continue
+    canvas.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
+  }
+  if (bakedMat) { bakedMat.map = null; bakedMat.color.set(0xcccccc); bakedMat.needsUpdate = true }
+}
+
+function uvExport() {
+  const canvas = document.getElementById('paint-canvas')
+  if (!canvas) return
+  const a = document.createElement('a')
+  a.download = (S.meshName?.replace(/\.[^.]+$/,'') ?? 'texture') + '_uvmap.png'
+  a.href = canvas.toDataURL('image/png')
+  a.click()
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function setView(v) {
+  S.activeView = v
+  document.getElementById('view-3d').classList.toggle('active', v === '3d')
+  document.getElementById('view-uv').classList.toggle('active', v === 'uv')
+  document.getElementById('view-split').classList.toggle('active', v === 'split')
+  document.getElementById('btn-3d').classList.toggle('active', v === '3d')
+  document.getElementById('btn-uv').classList.toggle('active', v === 'uv')
+  document.getElementById('btn-split').classList.toggle('active', v === 'split')
+
+  // Move renderer canvas to right container
+  setTimeout(() => {
+    const wrap = v === 'split'
+      ? document.getElementById('canvas3d-wrap-split')
+      : document.getElementById('canvas3d-wrap')
+    if (wrap && renderer.domElement.parentElement !== wrap) {
+      wrap.appendChild(renderer.domElement)
+    }
+    updateStageTransform()
+    updateStageTransform('split')
+  }, 0)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INSPECTOR CONTROLS
+// ═══════════════════════════════════════════════════════════════
+const PALETTE = ['#ffffff','#000000','#ff3b3b','#ff8c00','#ffb800','#39ff6e','#00e5ff','#0066ff','#9b59b6','#ff69b4','#8B4513','#888888']
+
+function buildPalette() {
+  const el = document.getElementById('palette')
+  PALETTE.forEach(c => {
+    const btn = document.createElement('button')
+    btn.className = 'swatch' + (c === S.color ? ' active' : '')
+    btn.style.background = c
+    btn.title = c
+    btn.onclick = () => setColor(c)
+    el.appendChild(btn)
+  })
+}
+
+function setColor(c) {
+  S.color = c
+  document.getElementById('color-pick').value = c
+  document.getElementById('color-hex').textContent = c.toUpperCase()
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.title === c))
+}
+
+function onColorChange(c) {
+  setColor(c)
+}
+
+function onBrushChange(v) {
+  S.brushSize = +v
+  document.getElementById('brush-val').textContent = v
+}
+
+function setMode(m) {
+  S.mode = m
+  document.getElementById('mode-paint').classList.toggle('active', m === 'paint')
+  document.getElementById('mode-erase').classList.toggle('active', m === 'erase')
+}
+
+function updateUVInfo() {
+  const el = document.getElementById('info-uvs')
+  const foot = document.getElementById('foot-txt')
+  const dot = document.getElementById('foot-dot')
+  if (S.hasUVs) {
+    el.textContent = 'YES'
+    el.className = 'row-val ok'
+    foot.textContent = 'READY'
+    dot.style.background = 'var(--ok)'
+    dot.style.boxShadow = '0 0 6px var(--ok)'
+  } else {
+    el.textContent = 'NONE'
+    el.className = 'row-val'
+    foot.textContent = 'NO UVS'
+    dot.style.background = 'var(--txt3)'
+    dot.style.boxShadow = 'none'
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATUS
+// ═══════════════════════════════════════════════════════════════
+function setStatus(msg, type = 'idle') {
+  const txt = document.getElementById('status-txt')
+  const dot = document.getElementById('status-dot')
+  const bar = document.getElementById('status-bar')
+  txt.textContent = msg
+
+  // Remove old spinner if any
+  bar.querySelector('.spinner')?.remove()
+
+  const colors = { idle:'var(--txt3)', ok:'var(--ok)', loading:'var(--warn)', error:'var(--err)' }
+  dot.style.background = colors[type] || colors.idle
+  dot.style.boxShadow = type === 'ok' ? '0 0 6px var(--ok)' : 'none'
+  txt.style.color = colors[type] || colors.idle
+
+  if (type === 'loading') {
+    const sp = document.createElement('div')
+    sp.className = 'spinner'
+    bar.insertBefore(sp, dot)
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════════════
+function resetAll() {
+  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose(); meshObj = null }
+  bakedMat = null
+  S.mesh = null; S.meshName = null; S.hasUVs = false
+
+  for (const id of ['paint-canvas','paint-canvas-split']) {
+    document.getElementById(id)?.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
+  }
+  for (const id of ['wire-canvas','wire-canvas-split']) {
+    document.getElementById(id)?.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
+  }
+
+  document.getElementById('no-mesh-hint').style.display = ''
+  document.getElementById('drop-hint').style.display = ''
+  document.getElementById('btn-unwrap').disabled = true
+  document.getElementById('btn-reset').style.display = 'none'
+  document.getElementById('info-file').textContent = '—'
+  document.getElementById('info-verts').textContent = '—'
+  document.getElementById('info-tris').textContent = '—'
+  document.getElementById('no-uv-hint').style.display = ''
+  if (document.getElementById('no-uv-hint-split'))
+    document.getElementById('no-uv-hint-split').style.display = ''
+  updateUVInfo()
+  setStatus('Drop a mesh to begin', 'idle')
+  orbit.reset()
+  setView('3d')
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAG AND DROP
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('dragenter', () => document.getElementById('drop-overlay').classList.add('show'))
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.getElementById('drop-overlay').classList.remove('show') })
+document.addEventListener('dragover', e => e.preventDefault())
+document.addEventListener('drop', async e => {
+  e.preventDefault()
+  document.getElementById('drop-overlay').classList.remove('show')
+  const file = e.dataTransfer.files?.[0]
+  if (file) await loadFile(file)
+})
+
+// ═══════════════════════════════════════════════════════════════
+// INIT CANVASES
+// ═══════════════════════════════════════════════════════════════
+function initCanvases() {
+  for (const id of ['checker-canvas','checker-canvas-split','paint-canvas','paint-canvas-split','wire-canvas','wire-canvas-split']) {
+    const c = document.getElementById(id)
+    if (c) { c.width = UV_SIZE; c.height = UV_SIZE }
+  }
+  drawChecker('checker-canvas')
+  drawChecker('checker-canvas-split')
+  initUVArea('uv-canvas-area', 'uv-stage')
+  initUVArea('uv-canvas-area-split', 'uv-stage-split')
+  updateStageTransform()
+  updateStageTransform('split')
+}
+
+buildPalette()
+initCanvases()
+setStatus('Drop a mesh to begin', 'idle')
+</script>
+</body>
+</html>
