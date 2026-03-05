@@ -312,20 +312,29 @@ const cam=new THREE.PerspectiveCamera(45,1,.01,1000)
 cam.position.set(0,2,5)
 
 const OC=(()=>{
-  const el=$('v3'),tgt=new THREE.Vector3()
+  const tgt=new THREE.Vector3()
   let dn=false,px=0,py=0,th=.4,ph=1.1,r=5
   let rdn=false,rx=0,ry=0
-  el.addEventListener('mousedown',e=>{
-    if(e.button===0){dn=true;px=e.clientX;py=e.clientY}
-    if(e.button===2){rdn=true;rx=e.clientX;ry=e.clientY}
-  })
+
+  // Bind mouse events to any 3D panel (v3 or sp3)
+  function bindEl(el){
+    el.addEventListener('mousedown',e=>{
+      if(e.button===0){dn=true;px=e.clientX;py=e.clientY}
+      if(e.button===2){rdn=true;rx=e.clientX;ry=e.clientY}
+    })
+    el.addEventListener('wheel',e=>{r=Math.max(.5,Math.min(50,r+e.deltaY*.01))},{passive:true})
+    el.addEventListener('contextmenu',e=>e.preventDefault())
+  }
+  bindEl($('v3'))
+  // sp3 exists in DOM but rSplit canvas is added later — bind sp3 directly
+  bindEl($('sp3'))
+
   window.addEventListener('mouseup',()=>{dn=false;rdn=false})
   window.addEventListener('mousemove',e=>{
     if(dn){th-=(e.clientX-px)*.005;ph=Math.max(.05,Math.min(Math.PI-.05,ph-(e.clientY-py)*.005));px=e.clientX;py=e.clientY}
     if(rdn){tgt.x-=(e.clientX-rx)*.004*r;tgt.y+=(e.clientY-ry)*.004*r;rx=e.clientX;ry=e.clientY}
   })
-  el.addEventListener('wheel',e=>{r=Math.max(.5,Math.min(50,r+e.deltaY*.01))},{passive:true})
-  el.addEventListener('contextmenu',e=>e.preventDefault())
+
   return{
     update(){
       cam.position.x=tgt.x+r*Math.sin(ph)*Math.sin(th)
@@ -343,7 +352,7 @@ function getSR(){
     rSplit=new THREE.WebGLRenderer({antialias:true})
     rSplit.setPixelRatio(devicePixelRatio)
     rSplit.setClearColor(0x0d0d0d)
-    rSplit.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%'
+    rSplit.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block'
     $('sp3').appendChild(rSplit.domElement)
   }
   return rSplit
@@ -352,11 +361,13 @@ function getSR(){
 let meshObj=null,mat=null
 
 function resizeAll(){
-  const el=$('v3'),w=el.clientWidth,h=el.clientHeight
-  if(w>0&&h>0){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
   if(S.view==='split'&&rSplit){
     const sp=$('sp3'),ws=sp.clientWidth,hs=sp.clientHeight
-    if(ws>0&&hs>0)rSplit.setSize(ws,hs,false)
+    if(ws>0&&hs>0){rSplit.setSize(ws,hs,false);cam.aspect=ws/hs;cam.updateProjectionMatrix()}
+  } else {
+    // Use vpa (always visible parent) so we get real dims even when v3 might be transitioning
+    const vpa=$('vpa'),w=vpa.clientWidth,h=vpa.clientHeight
+    if(w>0&&h>0){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
   }
 }
 
