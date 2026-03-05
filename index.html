@@ -305,9 +305,6 @@ const scene=new THREE.Scene()
 scene.add(new THREE.GridHelper(10,20,0x1a1a1a,0x141414))
 scene.add(new THREE.AmbientLight(0xffffff,.45))
 const kl=new THREE.DirectionalLight(0xffffff,1.6);kl.position.set(3,5,4);scene.add(kl)
-scene.add(Object.assign(new THREE.DirectionalLight(0x8899ff,.4),{position:{set:(x,y,z)=>{}}}) || (() => {
-  const l=new THREE.DirectionalLight(0x8899ff,.4);l.position.set(-4,2,-3);return l
-})())
 const fl=new THREE.DirectionalLight(0x8899ff,.4);fl.position.set(-4,2,-3);scene.add(fl)
 const rl=new THREE.DirectionalLight(0x00e5ff,.25);rl.position.set(0,-2,-5);scene.add(rl)
 
