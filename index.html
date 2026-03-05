@@ -8,251 +8,185 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 :root {
-  --bg:      #080808;
-  --panel:   #101010;
-  --panel2:  #161616;
-  --hover:   #1c1c1c;
-  --border:  #242424;
-  --borderB: #333;
-  --accent:  #00e5ff;
-  --accentD: #00b8cc;
-  --accentG: rgba(0,229,255,.12);
-  --txt:     #e0e0e0;
-  --txt2:    #777;
-  --txt3:    #444;
-  --ok:      #39ff6e;
-  --warn:    #ffb800;
-  --err:     #ff3b3b;
-  --mono:    'Space Mono', monospace;
-  --ui:      'Rajdhani', sans-serif;
+  --bg:#080808; --panel:#101010; --hover:#1c1c1c;
+  --border:#242424; --borderB:#333;
+  --accent:#00e5ff; --accentD:#00b8cc; --accentG:rgba(0,229,255,.12);
+  --txt:#e0e0e0; --txt2:#777; --txt3:#444;
+  --ok:#39ff6e; --warn:#ffb800; --err:#ff3b3b;
+  --mono:'Space Mono',monospace; --ui:'Rajdhani',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ui)}
-button{font-family:var(--ui);cursor:pointer;border:none;outline:none;transition:opacity .15s}
-button:hover{opacity:.85}
-button:active{opacity:.7}
+html,body,#app{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ui)}
+button{font-family:var(--ui);cursor:pointer;border:none;outline:none;transition:opacity .12s}
+button:hover{opacity:.82} button:active{opacity:.65}
 input[type=range]{accent-color:var(--accent);cursor:pointer;width:100%}
 input[type=color]{cursor:pointer;border:none;background:none;padding:0}
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:var(--panel)}
 ::-webkit-scrollbar-thumb{background:var(--borderB);border-radius:2px}
 
-/* ── LAYOUT ── */
-#app{display:flex;flex-direction:column;width:100vw;height:100vh}
+#app{display:flex;flex-direction:column}
 
-/* ── TOOLBAR ── */
+/* TOOLBAR */
 #toolbar{
   height:48px;background:var(--panel);border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;
 }
-#logo{
-  font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);
-  letter-spacing:.2em;margin-right:14px;display:flex;align-items:center;gap:6px;
-}
-#logo span{opacity:.4;font-size:9px}
-.divider{width:1px;height:22px;background:var(--border);margin:0 4px}
-.tb-btn{
+#logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.2em;margin-right:14px;display:flex;align-items:center;gap:5px}
+#logo em{opacity:.35;font-style:normal;font-size:9px}
+.sep{width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0}
+.tbtn{
   display:flex;align-items:center;gap:5px;padding:5px 11px;
   font-family:var(--mono);font-size:10px;letter-spacing:.08em;border-radius:2px;
-  background:var(--hover);color:var(--txt2);border:1px solid var(--border);
+  background:var(--hover);color:var(--txt2);border:1px solid var(--border);white-space:nowrap
 }
-.tb-btn.accent{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
-.tb-btn.danger{background:rgba(255,59,59,.08);color:var(--err);border-color:rgba(255,59,59,.25)}
-.tb-btn.active{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
-.tb-btn:disabled{opacity:.4;cursor:not-allowed}
-#status-bar{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 10px}
-#status-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);transition:all .3s;flex-shrink:0}
-#status-txt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.06em;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbtn.a{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
+.tbtn.d{background:rgba(255,59,59,.08);color:var(--err);border-color:rgba(255,59,59,.25)}
+.tbtn:disabled{opacity:.35;cursor:not-allowed}
+#statusbar{display:flex;align-items:center;gap:7px;margin-left:auto;padding:0 10px;min-width:0}
+#sdot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
+#stxt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
 
-/* ── MAIN ── */
-#main{flex:1;display:flex;overflow:hidden}
-#viewport-area{flex:1;position:relative;overflow:hidden}
-#view-3d,#view-uv,#view-split{position:absolute;inset:0;display:none}
-#view-3d.active,#view-uv.active,#view-split.active{display:flex}
-#view-split{gap:0}
-#view-split #canvas3d-wrap{flex:1;border-right:1px solid var(--border)}
-#view-split #uv-wrap-split{flex:1}
+/* MAIN */
+#main{flex:1;display:flex;overflow:hidden;min-height:0}
+#vp-area{flex:1;position:relative;overflow:hidden;min-width:0}
 
-/* ── 3D VIEWPORT ── */
-#canvas3d-wrap{position:relative;width:100%;height:100%}
-#canvas3d{display:block;width:100%;height:100%}
-#no-mesh-hint{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:16px;pointer-events:none
-}
-#no-mesh-hint .hint-icon{font-size:32px;opacity:.15}
-#no-mesh-hint .hint-txt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em}
+/* Views */
+.view{position:absolute;inset:0;display:none;overflow:hidden}
+.view.on{display:flex}
 
-/* ── UV EDITOR ── */
-#uv-wrap,#uv-wrap-split{
-  width:100%;height:100%;display:flex;flex-direction:column;background:var(--bg)
-}
-#uv-toolbar{
-  height:36px;background:var(--panel);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0
-}
-#uv-toolbar .uv-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:4px}
-.uv-btn{
-  padding:3px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
-  background:var(--hover);color:var(--txt2);border:1px solid var(--border);border-radius:2px
-}
-.uv-btn.accent{background:var(--accent);color:#000;font-weight:700;border-color:var(--accent)}
-#uv-zoom-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto}
-#uv-canvas-area{
-  flex:1;overflow:hidden;position:relative;cursor:crosshair
-}
-#uv-stage{
-  position:absolute;transform-origin:0 0
-}
-#uv-stage canvas{position:absolute;top:0;left:0}
-#no-uv-hint{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none
-}
+/* 3D */
+#v3d{position:relative}
+#canvas3d{position:absolute;inset:0;width:100%;height:100%;display:block}
+#no-mesh{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+#no-mesh .ico{font-size:28px;opacity:.12}
+#no-mesh .lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em}
 
-/* ── INSPECTOR ── */
-#inspector{
-  width:210px;height:100%;background:var(--panel);border-left:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto
-}
+/* UV */
+#vuv{flex-direction:column}
+#uvtb{height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0}
+#uvtb .lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:2px}
+.uvbtn{padding:3px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;background:var(--hover);color:var(--txt2);border:1px solid var(--border);border-radius:2px}
+.uvbtn.a{background:var(--accent);color:#000;font-weight:700;border-color:var(--accent)}
+#uvzoom{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto}
+#uvarea{flex:1;overflow:hidden;position:relative;cursor:crosshair;min-height:0}
+#uvstage{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
+#uvstage canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
+#no-uv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none}
+
+/* SPLIT */
+#vsplit{gap:0}
+#split-3d{flex:1;position:relative;overflow:hidden;border-right:1px solid var(--border)}
+#split-uv{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#split-uvarea{flex:1;overflow:hidden;position:relative;cursor:crosshair;min-height:0}
+#split-uvstage{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
+#split-uvstage canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
+#split-no-uv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none}
+
+/* INSPECTOR */
+#insp{width:210px;height:100%;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
 .sec{border-bottom:1px solid var(--border);padding:10px 12px}
-.sec-title{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.14em;margin-bottom:10px}
-.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
-.row-lbl{font-family:var(--mono);font-size:10px;color:var(--txt3)}
-.row-val{font-family:var(--mono);font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.row-val.ok{color:var(--ok)}
-.field-lbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.08em;margin-bottom:6px}
-.mode-row{display:flex;gap:6px;margin-bottom:12px}
-.mode-btn{
-  flex:1;padding:5px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
-  background:var(--bg);color:var(--txt3);border:1px solid var(--border);border-radius:2px
-}
-.mode-btn.active{background:var(--accentG);color:var(--accent);border-color:var(--accent)}
-#color-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-#color-pick{width:34px;height:26px;border:1px solid var(--border);border-radius:2px}
-#color-hex{
-  flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;
-  font-size:10px;font-family:var(--mono);color:var(--txt2);border-radius:2px
-}
-#brush-val{float:right;color:var(--accent)}
+.stitle{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.14em;margin-bottom:10px}
+.irow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ilbl{font-family:var(--mono);font-size:10px;color:var(--txt3)}
+.ival{font-family:var(--mono);font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.ival.ok{color:var(--ok)}
+.flbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.08em;margin-bottom:6px;display:block}
+.mrow{display:flex;gap:6px;margin-bottom:12px}
+.mbtn{flex:1;padding:5px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;background:var(--bg);color:var(--txt3);border:1px solid var(--border);border-radius:2px}
+.mbtn.on{background:var(--accentG);color:var(--accent);border-color:var(--accent)}
+#crow{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+#cpick{width:34px;height:26px;border:1px solid var(--border);border-radius:2px}
+#chex{flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;font-size:10px;font-family:var(--mono);color:var(--txt2);border-radius:2px}
 .palette{display:flex;flex-wrap:wrap;gap:4px}
-.swatch{width:23px;height:23px;border-radius:2px;cursor:pointer;border:1px solid var(--border)}
-.swatch.active{border:2px solid var(--accent)}
-#inspector-foot{
-  margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);
-  display:flex;align-items:center;gap:8px
-}
-#foot-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
-#foot-txt{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.06em}
+.sw{width:23px;height:23px;border-radius:2px;cursor:pointer;border:1px solid var(--border)}
+.sw.on{border:2px solid var(--accent)}
+#ifoot{margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+#fdot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
+#ftxt{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.06em}
 
-/* ── DROP HINT ── */
-#drop-hint{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:var(--panel);border:1px solid var(--border);border-radius:3px;
-  padding:7px 18px;pointer-events:none;transition:opacity .3s
-}
+/* DROP */
+#drop-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:7px 18px;pointer-events:none}
 #drop-hint span{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em}
+#drop-ov{position:fixed;inset:0;background:rgba(0,229,255,.04);border:2px solid var(--accent);display:none;z-index:100;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:.2em}
+#drop-ov.on{display:flex}
 
-/* ── SPINNER ── */
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{
-  width:8px;height:8px;border:1.5px solid var(--warn);border-top-color:transparent;
-  border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0
-}
-
-/* ── DROP OVERLAY ── */
-#drop-overlay{
-  position:fixed;inset:0;background:rgba(0,229,255,.05);
-  border:2px solid var(--accent);display:none;z-index:100;
-  align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:.2em
-}
-#drop-overlay.show{display:flex}
+.spin{width:8px;height:8px;border:1.5px solid var(--warn);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
 </style>
 </head>
 <body>
-
 <div id="app">
 
   <!-- TOOLBAR -->
   <div id="toolbar">
-    <div id="logo"><span>◈</span> UV FORGE</div>
-    <div class="divider"></div>
-    <input type="file" id="file-input" accept=".obj,.glb" style="display:none"/>
-    <button class="tb-btn" id="btn-load" onclick="document.getElementById('file-input').click()">
-      ⬡ LOAD MESH
-    </button>
-    <button class="tb-btn accent" id="btn-unwrap" disabled onclick="doUnwrap()">
-      ⊞ AUTO UNWRAP
-    </button>
-    <div class="divider"></div>
-    <button class="tb-btn active" id="btn-3d"    onclick="setView('3d')">3D</button>
-    <button class="tb-btn"        id="btn-uv"    onclick="setView('uv')">UV</button>
-    <button class="tb-btn"        id="btn-split" onclick="setView('split')">SPLIT</button>
-    <div id="status-bar">
-      <div id="status-dot"></div>
-      <div id="status-txt">Drop a mesh to begin</div>
+    <div id="logo"><em>◈</em> UV FORGE</div>
+    <div class="sep"></div>
+    <input type="file" id="finput" accept=".obj,.glb" style="display:none"/>
+    <button class="tbtn" onclick="document.getElementById('finput').click()">⬡ LOAD MESH</button>
+    <button class="tbtn a" id="btn-unwrap" disabled onclick="doUnwrap()">⊞ AUTO UNWRAP</button>
+    <div class="sep"></div>
+    <button class="tbtn a" id="bv3"  onclick="setView('3d')">3D</button>
+    <button class="tbtn"   id="bvuv" onclick="setView('uv')">UV</button>
+    <button class="tbtn"   id="bvsp" onclick="setView('split')">SPLIT</button>
+    <div id="statusbar">
+      <div id="sdot"></div>
+      <div id="stxt">Drop a mesh to begin</div>
     </div>
-    <div class="divider"></div>
-    <button class="tb-btn danger" id="btn-reset" style="display:none" onclick="resetAll()">✕ RESET</button>
+    <div class="sep"></div>
+    <button class="tbtn d" id="btn-reset" style="display:none" onclick="resetAll()">✕ RESET</button>
   </div>
 
   <!-- MAIN -->
   <div id="main">
-    <div id="viewport-area">
+    <div id="vp-area">
 
       <!-- 3D VIEW -->
-      <div id="view-3d" class="active">
-        <div id="canvas3d-wrap">
-          <canvas id="canvas3d"></canvas>
-          <div id="no-mesh-hint">
-            <div class="hint-icon">⬡</div>
-            <div class="hint-txt">NO MESH LOADED</div>
-          </div>
+      <div class="view on" id="v3d">
+        <canvas id="canvas3d"></canvas>
+        <div id="no-mesh">
+          <div class="ico">⬡</div>
+          <div class="lbl">NO MESH LOADED</div>
         </div>
       </div>
 
       <!-- UV VIEW -->
-      <div id="view-uv">
-        <div id="uv-wrap">
-          <div id="uv-toolbar">
-            <span class="uv-lbl">UV</span>
-            <button class="uv-btn" onclick="uvFill()">FILL</button>
-            <button class="uv-btn" onclick="uvClear()">CLEAR</button>
-            <span id="uv-zoom-lbl">ZOOM 100%</span>
-            <button class="uv-btn accent" onclick="uvExport()">EXPORT PNG</button>
+      <div class="view" id="vuv">
+        <div id="uvtb">
+          <span class="lbl">UV</span>
+          <button class="uvbtn" onclick="uvFill()">FILL</button>
+          <button class="uvbtn" onclick="uvClear()">CLEAR</button>
+          <span id="uvzoom">ZOOM 100%</span>
+          <button class="uvbtn a" onclick="uvExport()">EXPORT PNG</button>
+        </div>
+        <div id="uvarea">
+          <div id="uvstage">
+            <canvas id="cc"></canvas>
+            <canvas id="pc"></canvas>
+            <canvas id="wc"></canvas>
           </div>
-          <div id="uv-canvas-area" id="uv-area-main">
-            <div id="uv-stage">
-              <canvas id="checker-canvas"></canvas>
-              <canvas id="paint-canvas"></canvas>
-              <canvas id="wire-canvas"></canvas>
-            </div>
-            <div id="no-uv-hint">NO UV DATA</div>
-          </div>
+          <div id="no-uv">NO UV DATA</div>
         </div>
       </div>
 
       <!-- SPLIT VIEW -->
-      <div id="view-split">
-        <div id="canvas3d-wrap-split" style="flex:1;position:relative;border-right:1px solid var(--border)">
-          <!-- 3D shared via clone trick - we'll just reuse renderer -->
-        </div>
-        <div id="uv-wrap-split">
-          <div id="uv-toolbar-split" style="height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0">
-            <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:4px">UV</span>
-            <button class="uv-btn" onclick="uvFill()">FILL</button>
-            <button class="uv-btn" onclick="uvClear()">CLEAR</button>
-            <span id="uv-zoom-lbl-split" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto">ZOOM 100%</span>
-            <button class="uv-btn accent" onclick="uvExport()">EXPORT PNG</button>
+      <div class="view" id="vsplit">
+        <div id="split-3d"></div>
+        <div id="split-uv">
+          <div style="height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0">
+            <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:2px">UV</span>
+            <button class="uvbtn" onclick="uvFill()">FILL</button>
+            <button class="uvbtn" onclick="uvClear()">CLEAR</button>
+            <span id="uvzoom-s" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto">ZOOM 100%</span>
+            <button class="uvbtn a" onclick="uvExport()">EXPORT PNG</button>
           </div>
-          <div id="uv-canvas-area-split" style="flex:1;overflow:hidden;position:relative;cursor:crosshair">
-            <div id="uv-stage-split">
-              <canvas id="checker-canvas-split"></canvas>
-              <canvas id="paint-canvas-split"></canvas>
-              <canvas id="wire-canvas-split"></canvas>
+          <div id="split-uvarea">
+            <div id="split-uvstage">
+              <canvas id="cc-s"></canvas>
+              <canvas id="pc-s"></canvas>
+              <canvas id="wc-s"></canvas>
             </div>
-            <div id="no-uv-hint-split" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none">NO UV DATA</div>
+            <div id="split-no-uv">NO UV DATA</div>
           </div>
         </div>
       </div>
@@ -260,722 +194,445 @@ input[type=color]{cursor:pointer;border:none;background:none;padding:0}
     </div>
 
     <!-- INSPECTOR -->
-    <div id="inspector">
+    <div id="insp">
       <div class="sec">
-        <div class="sec-title">MESH</div>
-        <div class="row"><span class="row-lbl">FILE</span><span class="row-val" id="info-file">—</span></div>
-        <div class="row"><span class="row-lbl">VERTS</span><span class="row-val" id="info-verts">—</span></div>
-        <div class="row"><span class="row-lbl">TRIS</span><span class="row-val" id="info-tris">—</span></div>
-        <div class="row"><span class="row-lbl">UVS</span><span class="row-val" id="info-uvs">NONE</span></div>
+        <div class="stitle">MESH</div>
+        <div class="irow"><span class="ilbl">FILE</span><span class="ival" id="i-file">—</span></div>
+        <div class="irow"><span class="ilbl">VERTS</span><span class="ival" id="i-verts">—</span></div>
+        <div class="irow"><span class="ilbl">TRIS</span><span class="ival" id="i-tris">—</span></div>
+        <div class="irow"><span class="ilbl">UVS</span><span class="ival" id="i-uvs">NONE</span></div>
       </div>
       <div class="sec">
-        <div class="sec-title">BRUSH</div>
-        <div class="mode-row">
-          <button class="mode-btn active" id="mode-paint" onclick="setMode('paint')">PAINT</button>
-          <button class="mode-btn"        id="mode-erase" onclick="setMode('erase')">ERASE</button>
+        <div class="stitle">BRUSH</div>
+        <div class="mrow">
+          <button class="mbtn on" id="m-paint" onclick="setMode('paint')">PAINT</button>
+          <button class="mbtn"    id="m-erase" onclick="setMode('erase')">ERASE</button>
         </div>
-        <div class="field-lbl">COLOR</div>
-        <div id="color-row">
-          <input type="color" id="color-pick" value="#ffffff" oninput="onColorChange(this.value)"/>
-          <div id="color-hex">#FFFFFF</div>
+        <span class="flbl">COLOR</span>
+        <div id="crow">
+          <input type="color" id="cpick" value="#ffffff" oninput="setColor(this.value)"/>
+          <div id="chex">#FFFFFF</div>
         </div>
-        <div class="field-lbl">BRUSH SIZE — <span id="brush-val">20</span>px</div>
-        <input type="range" id="brush-size" min="1" max="120" value="20" oninput="onBrushChange(this.value)"/>
+        <span class="flbl">BRUSH SIZE — <b id="bval" style="color:var(--accent)">20</b>px</span>
+        <input type="range" id="bsize" min="1" max="120" value="20" oninput="S.brush=+this.value;document.getElementById('bval').textContent=this.value"/>
       </div>
       <div class="sec">
-        <div class="sec-title">PALETTE</div>
-        <div class="palette" id="palette"></div>
+        <div class="stitle">PALETTE</div>
+        <div class="palette" id="pal"></div>
       </div>
-      <div id="inspector-foot">
-        <div id="foot-dot"></div>
-        <div id="foot-txt">NO UVS</div>
+      <div id="ifoot">
+        <div id="fdot"></div>
+        <div id="ftxt">NO UVS</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- DROP OVERLAY -->
-<div id="drop-overlay">DROP MESH HERE</div>
-
-<!-- DROP HINT -->
-<div id="drop-hint"><span>DROP OBJ / GLB  ·  OR USE LOAD MESH</span></div>
+<div id="drop-hint"><span>DROP OBJ / GLB  ·  OR CLICK LOAD MESH</span></div>
+<div id="drop-ov">DROP MESH HERE</div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════
-const S = {
-  mesh: null,
-  meshName: null,
-  hasUVs: false,
-  color: '#ffffff',
-  brushSize: 20,
-  mode: 'paint',   // 'paint' | 'erase'
-  activeView: '3d',
-  loading: false,
-}
+const S = { mesh:null, name:null, uvs:false, color:'#ffffff', brush:20, mode:'paint', view:'3d' }
+const UV = 1024
+const $ = id => document.getElementById(id)
 
-const UV_SIZE = 1024
-
-// ═══════════════════════════════════════════════════════════════
-// THREE.JS SETUP
-// ═══════════════════════════════════════════════════════════════
-const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true })
+// ─── THREE.JS ─────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ canvas: $('canvas3d'), antialias: true })
 renderer.setPixelRatio(devicePixelRatio)
 renderer.setClearColor(0x0d0d0d)
-renderer.shadowMap.enabled = true
 
 const scene = new THREE.Scene()
 scene.add(new THREE.GridHelper(10, 20, 0x1a1a1a, 0x141414))
 scene.add(new THREE.AmbientLight(0xffffff, 0.45))
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.6)
-keyLight.position.set(3, 5, 4)
-scene.add(keyLight)
-const fillLight = new THREE.DirectionalLight(0x8899ff, 0.4)
-fillLight.position.set(-4, 2, -3)
-scene.add(fillLight)
-const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.25)
-rimLight.position.set(0, -2, -5)
-scene.add(rimLight)
+const kl = new THREE.DirectionalLight(0xffffff, 1.6); kl.position.set(3,5,4); scene.add(kl)
+const fl = new THREE.DirectionalLight(0x8899ff, 0.4); fl.position.set(-4,2,-3); scene.add(fl)
+const rl = new THREE.DirectionalLight(0x00e5ff, 0.25); rl.position.set(0,-2,-5); scene.add(rl)
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000)
 camera.position.set(0, 2, 5)
 
-// Orbit controls (inline — no addons needed)
-const orbit = (() => {
-  const el = renderer.domElement
-  let down = false, px = 0, py = 0
-  let theta = 0.4, phi = 1.1, radius = 5
-  const target = new THREE.Vector3()
-
-  el.addEventListener('mousedown', e => { if (e.button === 0) { down = true; px = e.clientX; py = e.clientY } })
-  window.addEventListener('mouseup', () => down = false)
-  window.addEventListener('mousemove', e => {
-    if (!down) return
-    const dx = e.clientX - px, dy = e.clientY - py
-    theta -= dx * 0.005; phi -= dy * 0.005
-    phi = Math.max(0.05, Math.min(Math.PI - 0.05, phi))
-    px = e.clientX; py = e.clientY
+// ─── INLINE ORBIT ────────────────────────────────────────────────────
+const OC = (() => {
+  const el = $('v3d')
+  let dn=false, px=0, py=0, theta=0.4, phi=1.1, r=5
+  const tgt = new THREE.Vector3()
+  let rdn=false, rx=0, ry=0
+  el.addEventListener('mousedown', e => {
+    if(e.button===0){dn=true;px=e.clientX;py=e.clientY}
+    if(e.button===2){rdn=true;rx=e.clientX;ry=e.clientY}
   })
-  el.addEventListener('wheel', e => { radius = Math.max(0.5, Math.min(50, radius + e.deltaY * 0.01)) }, { passive: true })
-  el.addEventListener('contextmenu', e => e.preventDefault())
-
-  let rmx = 0, rmy = 0, rmdown = false
-  el.addEventListener('mousedown', e => { if (e.button === 2) { rmdown = true; rmx = e.clientX; rmy = e.clientY } })
+  window.addEventListener('mouseup', () => {dn=false;rdn=false})
   window.addEventListener('mousemove', e => {
-    if (!rmdown) return
-    const dx = (e.clientX - rmx) * 0.005
-    const dy = (e.clientY - rmy) * 0.005
-    target.x -= dx * radius * 0.3
-    target.y += dy * radius * 0.3
-    rmx = e.clientX; rmy = e.clientY
+    if(dn){
+      theta -= (e.clientX-px)*0.005
+      phi = Math.max(0.05, Math.min(Math.PI-0.05, phi-(e.clientY-py)*0.005))
+      px=e.clientX; py=e.clientY
+    }
+    if(rdn){
+      tgt.x -= (e.clientX-rx)*0.004*r
+      tgt.y += (e.clientY-ry)*0.004*r
+      rx=e.clientX; ry=e.clientY
+    }
   })
-  window.addEventListener('mouseup', () => rmdown = false)
-
+  el.addEventListener('wheel', e=>{ r=Math.max(0.5,Math.min(50,r+e.deltaY*0.01)) },{passive:true})
+  el.addEventListener('contextmenu', e=>e.preventDefault())
   return {
-    update() {
-      camera.position.x = target.x + radius * Math.sin(phi) * Math.sin(theta)
-      camera.position.y = target.y + radius * Math.cos(phi)
-      camera.position.z = target.z + radius * Math.sin(phi) * Math.cos(theta)
-      camera.lookAt(target)
+    update(){
+      camera.position.x = tgt.x + r*Math.sin(phi)*Math.sin(theta)
+      camera.position.y = tgt.y + r*Math.cos(phi)
+      camera.position.z = tgt.z + r*Math.sin(phi)*Math.cos(theta)
+      camera.lookAt(tgt)
     },
-    reset(dist = 4) { radius = dist; theta = 0.4; phi = 1.1; target.set(0,0,0) }
+    reset(d=3.5){ r=d; theta=0.4; phi=1.1; tgt.set(0,0,0) }
   }
 })()
 
-let meshObj = null
-let bakedMat = null
-
-function animate() {
-  requestAnimationFrame(animate)
-  orbit.update()
-
-  // Resize renderer to current container
-  const wrap = S.activeView === 'split'
-    ? document.getElementById('canvas3d-wrap-split')
-    : document.getElementById('canvas3d-wrap')
-
-  if (wrap) {
-    const w = wrap.clientWidth, h = wrap.clientHeight
-    if (renderer.domElement.width !== w * devicePixelRatio || renderer.domElement.height !== h * devicePixelRatio) {
-      renderer.setSize(w, h)
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
-    }
-
-    // Move canvas to correct container
-    if (renderer.domElement.parentElement !== wrap) {
-      wrap.appendChild(renderer.domElement)
-    }
+// Secondary renderer for split view (avoids moving canvas)
+let rSplit = null
+function getSplitRenderer(){
+  if(!rSplit){
+    rSplit = new THREE.WebGLRenderer({ antialias: true })
+    rSplit.setPixelRatio(devicePixelRatio)
+    rSplit.setClearColor(0x0d0d0d)
+    rSplit.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%'
+    $('split-3d').appendChild(rSplit.domElement)
   }
+  return rSplit
+}
 
+let meshObj = null, mat = null
+
+function resizeAll(){
+  const v = $('v3d'), w=v.clientWidth, h=v.clientHeight
+  if(w>0&&h>0){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix() }
+  if(S.view==='split'&&rSplit){
+    const sp=$('split-3d'), ws=sp.clientWidth, hs=sp.clientHeight
+    if(ws>0&&hs>0) rSplit.setSize(ws,hs,false)
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate)
+  OC.update()
+  resizeAll()
   renderer.render(scene, camera)
+  if(S.view==='split'&&rSplit) rSplit.render(scene, camera)
 }
 animate()
 
-// ═══════════════════════════════════════════════════════════════
-// MESH LOADING
-// ═══════════════════════════════════════════════════════════════
-document.getElementById('file-input').addEventListener('change', async e => {
-  const file = e.target.files?.[0]
-  e.target.value = ''
-  if (file) await loadFile(file)
+// ─── FILE LOADING ─────────────────────────────────────────────────────
+$('finput').addEventListener('change', async e => {
+  const f=e.target.files?.[0]; e.target.value=''
+  if(f) await loadFile(f)
 })
 
-async function loadFile(file) {
-  const ext = file.name.split('.').pop().toLowerCase()
-  if (!['obj','glb','gltf'].includes(ext)) { setStatus(`Unsupported: .${ext}`, 'error'); return }
-  setStatus(`Loading ${file.name}...`, 'loading')
-  try {
+async function loadFile(file){
+  const ext=file.name.split('.').pop().toLowerCase()
+  if(!['obj','glb','gltf'].includes(ext)){ setStatus('Unsupported: .'+ext,'err'); return }
+  setStatus('Loading '+file.name+'...','load')
+  try{
     const geo = await parseFile(file, ext)
-    setGeometry(geo, file.name)
-    setStatus(`Loaded: ${file.name}`, 'ok')
-  } catch(err) {
-    setStatus(`Error: ${err.message}`, 'error')
-  }
+    setGeo(geo, file.name)
+    setStatus('Loaded: '+file.name,'ok')
+  }catch(e){ setStatus('Error: '+e.message,'err') }
 }
 
-function parseFile(file, ext) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    if (ext === 'obj') {
-      reader.onload = e => {
-        try { resolve(parseOBJ(e.target.result)) }
-        catch(err) { reject(err) }
-      }
-      reader.onerror = () => reject(new Error('File read failed'))
-      reader.readAsText(file)
-    } else {
-      reader.onload = e => {
-        try { resolve(parseGLB(e.target.result)) }
-        catch(err) { reject(err) }
-      }
-      reader.onerror = () => reject(new Error('File read failed'))
-      reader.readAsArrayBuffer(file)
+function parseFile(file, ext){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader()
+    if(ext==='obj'){
+      rd.onload=e=>{try{res(parseOBJ(e.target.result))}catch(e){rej(e)}}
+      rd.onerror=()=>rej(new Error('Read failed'))
+      rd.readAsText(file)
+    }else{
+      rd.onload=e=>{try{res(parseGLB(e.target.result))}catch(e){rej(e)}}
+      rd.onerror=()=>rej(new Error('Read failed'))
+      rd.readAsArrayBuffer(file)
     }
   })
 }
 
-// Minimal OBJ parser
-function parseOBJ(text) {
-  const positions = [], uvs = [], normals = []
-  const posIdx = [], uvIdx = [], normIdx = []
-
-  for (const line of text.split('\n')) {
-    const parts = line.trim().split(/\s+/)
-    if (parts[0] === 'v')  positions.push(+parts[1], +parts[2], +parts[3])
-    if (parts[0] === 'vt') uvs.push(+parts[1], +parts[2])
-    if (parts[0] === 'vn') normals.push(+parts[1], +parts[2], +parts[3])
-    if (parts[0] === 'f') {
-      const verts = parts.slice(1).map(p => p.split('/').map(x => +x - 1))
-      for (let i = 1; i < verts.length - 1; i++) {
-        for (const v of [verts[0], verts[i], verts[i+1]]) {
-          posIdx.push(v[0])
-          uvIdx.push(v[1] ?? -1)
-          normIdx.push(v[2] ?? -1)
-        }
-      }
+function parseOBJ(txt){
+  const vp=[],vt=[],vn=[],pi=[],ti=[],ni=[]
+  for(const line of txt.split('\n')){
+    const p=line.trim().split(/\s+/)
+    if(p[0]==='v')  vp.push(+p[1],+p[2],+p[3])
+    if(p[0]==='vt') vt.push(+p[1],+p[2])
+    if(p[0]==='vn') vn.push(+p[1],+p[2],+p[3])
+    if(p[0]==='f'){
+      const vs=p.slice(1).map(s=>s.split('/').map(x=>+x-1))
+      for(let i=1;i<vs.length-1;i++)
+        for(const v of [vs[0],vs[i],vs[i+1]]){ pi.push(v[0]); ti.push(v[1]??-1); ni.push(v[2]??-1) }
     }
   }
-
-  const count = posIdx.length
-  const pos  = new Float32Array(count * 3)
-  const uv   = uvs.length ? new Float32Array(count * 2) : null
-  const norm = normals.length ? new Float32Array(count * 3) : null
-
-  for (let i = 0; i < count; i++) {
-    const pi = posIdx[i]
-    pos[i*3]   = positions[pi*3]
-    pos[i*3+1] = positions[pi*3+1]
-    pos[i*3+2] = positions[pi*3+2]
-    if (uv && uvIdx[i] >= 0) {
-      uv[i*2]   = uvs[uvIdx[i]*2]
-      uv[i*2+1] = uvs[uvIdx[i]*2+1]
-    }
-    if (norm && normIdx[i] >= 0) {
-      norm[i*3]   = normals[normIdx[i]*3]
-      norm[i*3+1] = normals[normIdx[i]*3+1]
-      norm[i*3+2] = normals[normIdx[i]*3+2]
-    }
+  const n=pi.length
+  const pos=new Float32Array(n*3)
+  const uv=vt.length?new Float32Array(n*2):null
+  const norm=vn.length?new Float32Array(n*3):null
+  for(let i=0;i<n;i++){
+    const p=pi[i]; pos[i*3]=vp[p*3]; pos[i*3+1]=vp[p*3+1]; pos[i*3+2]=vp[p*3+2]
+    if(uv&&ti[i]>=0){ uv[i*2]=vt[ti[i]*2]; uv[i*2+1]=vt[ti[i]*2+1] }
+    if(norm&&ni[i]>=0){ norm[i*3]=vn[ni[i]*3]; norm[i*3+1]=vn[ni[i]*3+1]; norm[i*3+2]=vn[ni[i]*3+2] }
   }
-
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  if (uv)   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
-  if (norm) geo.setAttribute('normal', new THREE.BufferAttribute(norm, 3))
+  const geo=new THREE.BufferGeometry()
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3))
+  if(uv)   geo.setAttribute('uv',new THREE.BufferAttribute(uv,2))
+  if(norm) geo.setAttribute('normal',new THREE.BufferAttribute(norm,3))
   else geo.computeVertexNormals()
   return geo
 }
 
-// Minimal GLB parser (binary GLTF)
-function parseGLB(buffer) {
-  const view = new DataView(buffer)
-  // magic check
-  if (view.getUint32(0, true) !== 0x46546C67) throw new Error('Not a valid GLB file')
-  const jsonLen = view.getUint32(12, true)
-  const jsonStr = new TextDecoder().decode(new Uint8Array(buffer, 20, jsonLen))
-  const gltf = JSON.parse(jsonStr)
-  const binOffset = 20 + jsonLen + 8
-  const bin = buffer.slice(binOffset)
-
-  function getAccessor(idx) {
-    const acc = gltf.accessors[idx]
-    const bv  = gltf.bufferViews[acc.bufferView]
-    const byteOffset = (bv.byteOffset || 0) + (acc.byteOffset || 0)
-    const compCount = { SCALAR:1, VEC2:2, VEC3:3, VEC4:4, MAT4:16 }[acc.type]
-    const TypedArr = acc.componentType === 5126 ? Float32Array
-                   : acc.componentType === 5123 ? Uint16Array
-                   : acc.componentType === 5125 ? Uint32Array : Float32Array
-    return new TypedArr(bin, byteOffset, acc.count * compCount)
+function parseGLB(buf){
+  const dv=new DataView(buf)
+  if(dv.getUint32(0,true)!==0x46546C67) throw new Error('Invalid GLB')
+  const jlen=dv.getUint32(12,true)
+  const gltf=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,20,jlen)))
+  const bin=buf.slice(20+jlen+8)
+  function acc(idx){
+    const a=gltf.accessors[idx],bv=gltf.bufferViews[a.bufferView]
+    const off=(bv.byteOffset||0)+(a.byteOffset||0)
+    const nc={SCALAR:1,VEC2:2,VEC3:3,VEC4:4}[a.type]
+    const T=a.componentType===5126?Float32Array:a.componentType===5123?Uint16Array:Uint32Array
+    return new T(bin,off,a.count*nc)
   }
-
-  const mesh = gltf.meshes[0]
-  const prim = mesh.primitives[0]
-  const posData  = getAccessor(prim.attributes.POSITION)
-  const normData = prim.attributes.NORMAL !== undefined ? getAccessor(prim.attributes.NORMAL) : null
-  const uvData   = prim.attributes.TEXCOORD_0 !== undefined ? getAccessor(prim.attributes.TEXCOORD_0) : null
-  const idxData  = prim.indices !== undefined ? getAccessor(prim.indices) : null
-
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posData), 3))
-  if (normData) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normData), 3))
-  if (uvData)   geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvData), 2))
-  if (idxData)  geo.setIndex(new THREE.BufferAttribute(new Uint32Array(idxData), 1))
-  if (!normData) geo.computeVertexNormals()
+  const prim=gltf.meshes[0].primitives[0]
+  const geo=new THREE.BufferGeometry()
+  geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.POSITION)),3))
+  if(prim.attributes.NORMAL!=null)    geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.NORMAL)),3))
+  if(prim.attributes.TEXCOORD_0!=null) geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.TEXCOORD_0)),2))
+  if(prim.indices!=null) geo.setIndex(new THREE.BufferAttribute(new Uint32Array(acc(prim.indices)),1))
+  if(!prim.attributes.NORMAL) geo.computeVertexNormals()
   return geo
 }
 
-function setGeometry(geo, name) {
-  // Normalize
+function setGeo(geo, name){
   geo.computeBoundingBox()
-  const box = geo.boundingBox
-  const c = new THREE.Vector3(); box.getCenter(c)
-  geo.translate(-c.x, -c.y, -c.z)
-  const sz = new THREE.Vector3(); box.getSize(sz)
-  const maxD = Math.max(sz.x, sz.y, sz.z)
-  if (maxD > 0) { const s = 2/maxD; geo.scale(s,s,s) }
-
-  // Remove old mesh
-  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose() }
-
-  bakedMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.65, metalness: 0.08, side: THREE.DoubleSide })
-  meshObj = new THREE.Mesh(geo, bakedMat)
-  scene.add(meshObj)
-
-  S.mesh = geo
-  S.meshName = name
-  S.hasUVs = !!geo.attributes.uv
-
-  orbit.reset(3.5)
-
-  // Update UI
-  document.getElementById('no-mesh-hint').style.display = 'none'
-  document.getElementById('drop-hint').style.display = 'none'
-  document.getElementById('btn-unwrap').disabled = false
-  document.getElementById('btn-reset').style.display = ''
-  document.getElementById('info-file').textContent = name
-  const verts = geo.attributes.position.count
-  const tris = geo.index ? geo.index.count / 3 : verts / 3
-  document.getElementById('info-verts').textContent = verts.toLocaleString()
-  document.getElementById('info-tris').textContent = Math.round(tris).toLocaleString()
-  updateUVInfo()
-  drawUVWire()
+  const c=new THREE.Vector3(); geo.boundingBox.getCenter(c); geo.translate(-c.x,-c.y,-c.z)
+  const sz=new THREE.Vector3(); geo.boundingBox.getSize(sz)
+  const m=Math.max(sz.x,sz.y,sz.z); if(m>0){const f=2/m;geo.scale(f,f,f)}
+  if(meshObj){ scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose() }
+  mat=new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.65,metalness:.08,side:THREE.DoubleSide})
+  meshObj=new THREE.Mesh(geo,mat); scene.add(meshObj)
+  S.mesh=geo; S.name=name; S.uvs=!!geo.attributes.uv
+  OC.reset()
+  $('no-mesh').style.display='none'
+  $('drop-hint').style.display='none'
+  $('btn-unwrap').disabled=false
+  $('btn-reset').style.display=''
+  $('i-file').textContent=name
+  $('i-verts').textContent=geo.attributes.position.count.toLocaleString()
+  $('i-tris').textContent=Math.round((geo.index?geo.index.count:geo.attributes.position.count)/3).toLocaleString()
+  refreshUVInfo(); drawWire(); drawChecker()
 }
 
-// ═══════════════════════════════════════════════════════════════
-// UV UNWRAP (spherical + planar projection — no WASM needed)
-// ═══════════════════════════════════════════════════════════════
-function doUnwrap() {
-  if (!S.mesh) return
-  setStatus('Generating UVs...', 'loading')
-  document.getElementById('btn-unwrap').disabled = true
-
-  setTimeout(() => {
-    try {
-      const geo = S.mesh
-      const pos = geo.attributes.position
-      const count = pos.count
-      const uvArr = new Float32Array(count * 2)
-
-      // Compute bounds for normalization
+// ─── UV UNWRAP ────────────────────────────────────────────────────────
+function doUnwrap(){
+  if(!S.mesh) return
+  setStatus('Generating UVs...','load')
+  $('btn-unwrap').disabled=true
+  setTimeout(()=>{
+    try{
+      const geo=S.mesh,pos=geo.attributes.position,n=pos.count
       geo.computeBoundingBox()
-      const box = geo.boundingBox
-      const center = new THREE.Vector3(); box.getCenter(center)
-      const size = new THREE.Vector3(); box.getSize(size)
-
-      // Spherical UV projection
-      for (let i = 0; i < count; i++) {
-        const x = pos.getX(i) - center.x
-        const y = pos.getY(i) - center.y
-        const z = pos.getZ(i) - center.z
-        const len = Math.sqrt(x*x + y*y + z*z) || 1
-        const nx = x/len, ny = y/len, nz = z/len
-        uvArr[i*2]   = 0.5 + Math.atan2(nz, nx) / (2 * Math.PI)
-        uvArr[i*2+1] = 0.5 - Math.asin(Math.max(-1, Math.min(1, ny))) / Math.PI
+      const c=new THREE.Vector3(); geo.boundingBox.getCenter(c)
+      const uv=new Float32Array(n*2)
+      for(let i=0;i<n;i++){
+        const x=pos.getX(i)-c.x,y=pos.getY(i)-c.y,z=pos.getZ(i)-c.z
+        const l=Math.sqrt(x*x+y*y+z*z)||1
+        uv[i*2]  =0.5+Math.atan2(z/l,x/l)/(2*Math.PI)
+        uv[i*2+1]=0.5-Math.asin(Math.max(-1,Math.min(1,y/l)))/Math.PI
       }
-
-      geo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2))
-      S.hasUVs = true
-
-      updateUVInfo()
-      drawUVWire()
-      drawChecker('checker-canvas')
-      drawChecker('checker-canvas-split')
-      setStatus('UVs generated (spherical)', 'ok')
-      setView('uv')
-    } catch(err) {
-      setStatus(`Unwrap failed: ${err.message}`, 'error')
-    }
-    document.getElementById('btn-unwrap').disabled = false
-  }, 50)
+      geo.setAttribute('uv',new THREE.BufferAttribute(uv,2))
+      S.uvs=true; refreshUVInfo(); drawWire(); drawChecker()
+      setStatus('UVs generated','ok'); setView('uv')
+    }catch(e){ setStatus('Unwrap failed: '+e.message,'err') }
+    $('btn-unwrap').disabled=false
+  },30)
 }
 
-// ═══════════════════════════════════════════════════════════════
-// UV EDITOR
-// ═══════════════════════════════════════════════════════════════
-let uvZoom = 1, uvPan = { x: 0, y: 0 }
-let uvPainting = false, uvPanning = false
-let uvLastPos = null, uvPanStart = null
+// ─── UV EDITOR ────────────────────────────────────────────────────────
+let uvZ=1, uvPan={x:0,y:0}, uvPainting=false, uvPanning=false, uvLast=null, uvPS=null
 
-function drawChecker(id) {
-  const canvas = document.getElementById(id)
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  const s = 32
-  for (let r = 0; r < UV_SIZE/s; r++) {
-    for (let c = 0; c < UV_SIZE/s; c++) {
-      ctx.fillStyle = (r+c)%2===0 ? '#1a1a1a' : '#141414'
-      ctx.fillRect(c*s, r*s, s, s)
+function drawChecker(){
+  for(const id of ['cc','cc-s']){
+    const cv=$(id); if(!cv) continue
+    const ctx=cv.getContext('2d')
+    for(let r=0;r<UV/32;r++) for(let c=0;c<UV/32;c++){
+      ctx.fillStyle=(r+c)%2===0?'#1a1a1a':'#141414'
+      ctx.fillRect(c*32,r*32,32,32)
     }
   }
 }
 
-function drawUVWire() {
-  for (const id of ['wire-canvas','wire-canvas-split']) {
-    const canvas = document.getElementById(id)
-    if (!canvas) continue
-    const ctx = canvas.getContext('2d')
-    ctx.clearRect(0,0,UV_SIZE,UV_SIZE)
-    if (!S.mesh || !S.mesh.attributes.uv) continue
-    const uv = S.mesh.attributes.uv
-    const index = S.mesh.index
-    ctx.strokeStyle = 'rgba(0,229,255,.65)'
-    ctx.lineWidth = 0.7
+function drawWire(){
+  for(const id of ['wc','wc-s']){
+    const cv=$(id); if(!cv) continue
+    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,UV,UV)
+    if(!S.mesh||!S.mesh.attributes.uv) continue
+    const uv=S.mesh.attributes.uv,idx=S.mesh.index
+    ctx.strokeStyle='rgba(0,229,255,.65)'; ctx.lineWidth=0.7
     ctx.beginPath()
-    const drawTri = (a,b,c) => {
-      ctx.moveTo(uv.getX(a)*UV_SIZE, (1-uv.getY(a))*UV_SIZE)
-      ctx.lineTo(uv.getX(b)*UV_SIZE, (1-uv.getY(b))*UV_SIZE)
-      ctx.lineTo(uv.getX(c)*UV_SIZE, (1-uv.getY(c))*UV_SIZE)
+    const tri=(a,b,c)=>{
+      ctx.moveTo(uv.getX(a)*UV,(1-uv.getY(a))*UV)
+      ctx.lineTo(uv.getX(b)*UV,(1-uv.getY(b))*UV)
+      ctx.lineTo(uv.getX(c)*UV,(1-uv.getY(c))*UV)
       ctx.closePath()
     }
-    if (index) {
-      for (let i = 0; i < index.count; i+=3) drawTri(index.getX(i), index.getX(i+1), index.getX(i+2))
-    } else {
-      for (let i = 0; i < uv.count; i+=3) drawTri(i, i+1, i+2)
-    }
+    if(idx){for(let i=0;i<idx.count;i+=3)tri(idx.getX(i),idx.getX(i+1),idx.getX(i+2))}
+    else{for(let i=0;i<uv.count;i+=3)tri(i,i+1,i+2)}
     ctx.stroke()
   }
-  document.getElementById('no-uv-hint').style.display = 'none'
-  if (document.getElementById('no-uv-hint-split'))
-    document.getElementById('no-uv-hint-split').style.display = 'none'
+  $('no-uv').style.display='none'
+  $('split-no-uv').style.display='none'
 }
 
-function updateStageTransform(suffix = '') {
-  const s = suffix ? '-'+suffix : ''
-  const stage = document.getElementById('uv-stage' + (suffix ? '-split' : ''))
-  const area  = document.getElementById('uv-canvas-area' + (suffix ? '-split' : ''))
-  if (!stage || !area) return
-  const w = area.clientWidth, h = area.clientHeight
-  const cx = w/2 - (UV_SIZE*uvZoom)/2 + uvPan.x
-  const cy = h/2 - (UV_SIZE*uvZoom)/2 + uvPan.y
-  stage.style.transform = `translate(${cx}px,${cy}px) scale(${uvZoom})`
-  stage.style.width  = UV_SIZE + 'px'
-  stage.style.height = UV_SIZE + 'px'
-  const zlbl = document.getElementById('uv-zoom-lbl' + (suffix ? '-split' : ''))
-  if (zlbl) zlbl.textContent = 'ZOOM ' + Math.round(uvZoom*100) + '%'
+function uvXform(){
+  for(const[sid,aid,zid]of[['uvstage','uvarea','uvzoom'],['split-uvstage','split-uvarea','uvzoom-s']]){
+    const st=$(sid),ar=$(aid),zl=$(zid); if(!st||!ar) continue
+    const w=ar.clientWidth,h=ar.clientHeight
+    st.style.transform=`translate(${w/2-UV*uvZ/2+uvPan.x}px,${h/2-UV*uvZ/2+uvPan.y}px) scale(${uvZ})`
+    if(zl) zl.textContent='ZOOM '+Math.round(uvZ*100)+'%'
+  }
 }
 
-function initUVArea(areaId, stageId) {
-  const area = document.getElementById(areaId)
-  if (!area) return
-  const isSplit = areaId.includes('split')
+function uvGetPos(e, stageId){
+  const st=$(stageId); if(!st) return{x:0,y:0}
+  const r=st.getBoundingClientRect()
+  return{x:(e.clientX-r.left)*(UV/r.width),y:(e.clientY-r.top)*(UV/r.height)}
+}
 
-  area.addEventListener('mousedown', e => {
-    if (e.button === 1 || e.altKey) {
-      uvPanning = true
-      uvPanStart = { x: e.clientX - uvPan.x, y: e.clientY - uvPan.y }
-      return
-    }
-    uvPainting = true
-    uvLastPos = null
-    uvPaint(e, isSplit)
+function uvDoPaint(e, isSplit){
+  const pcId=isSplit?'pc-s':'pc', mId=isSplit?'pc':'pc-s', stId=isSplit?'split-uvstage':'uvstage'
+  const cv=$(pcId); if(!cv) return
+  const ctx=cv.getContext('2d'), pos=uvGetPos(e,stId)
+  ctx.globalCompositeOperation=S.mode==='erase'?'destination-out':'source-over'
+  ctx.strokeStyle=S.color; ctx.lineWidth=S.brush; ctx.lineCap='round'; ctx.lineJoin='round'
+  if(uvLast){ctx.beginPath();ctx.moveTo(uvLast.x,uvLast.y);ctx.lineTo(pos.x,pos.y);ctx.stroke()}
+  else{ctx.beginPath();ctx.arc(pos.x,pos.y,S.brush/2,0,Math.PI*2);ctx.fillStyle=S.mode==='erase'?'rgba(0,0,0,1)':S.color;ctx.fill()}
+  uvLast=pos
+  const m=$(mId); if(m){const mc=m.getContext('2d');mc.clearRect(0,0,UV,UV);mc.drawImage(cv,0,0)}
+  applyTex(cv)
+}
+
+function setupUVArea(areaId, stageId, isSplit){
+  const ar=$(areaId); if(!ar) return
+  ar.addEventListener('mousedown',e=>{
+    if(e.button===1||e.altKey){uvPanning=true;uvPS={x:e.clientX-uvPan.x,y:e.clientY-uvPan.y};return}
+    uvPainting=true;uvLast=null;uvDoPaint(e,isSplit)
   })
-  area.addEventListener('mousemove', e => {
-    if (uvPanning && uvPanStart) {
-      uvPan.x = e.clientX - uvPanStart.x
-      uvPan.y = e.clientY - uvPanStart.y
-      updateStageTransform(isSplit ? 'split' : '')
-      return
-    }
-    if (uvPainting) uvPaint(e, isSplit)
+  ar.addEventListener('mousemove',e=>{
+    if(uvPanning&&uvPS){uvPan={x:e.clientX-uvPS.x,y:e.clientY-uvPS.y};uvXform();return}
+    if(uvPainting)uvDoPaint(e,isSplit)
   })
-  area.addEventListener('mouseup',    () => { uvPainting = false; uvPanning = false; uvLastPos = null })
-  area.addEventListener('mouseleave', () => { uvPainting = false; uvPanning = false; uvLastPos = null })
-  area.addEventListener('wheel', e => {
-    e.preventDefault()
-    uvZoom = Math.max(0.2, Math.min(10, uvZoom - e.deltaY * 0.001))
-    updateStageTransform()
-    updateStageTransform('split')
-  }, { passive: false })
+  ar.addEventListener('mouseup',()=>{uvPainting=false;uvPanning=false;uvLast=null})
+  ar.addEventListener('mouseleave',()=>{uvPainting=false;uvPanning=false;uvLast=null})
+  ar.addEventListener('wheel',e=>{e.preventDefault();uvZ=Math.max(.2,Math.min(10,uvZ-e.deltaY*.001));uvXform()},{passive:false})
 }
 
-function uvPaint(e, isSplit) {
-  const paintId = isSplit ? 'paint-canvas-split' : 'paint-canvas'
-  const mirrorId = isSplit ? 'paint-canvas' : 'paint-canvas-split'
-  const canvas = document.getElementById(paintId)
-  if (!canvas) return
-  const stageId = isSplit ? 'uv-stage-split' : 'uv-stage'
-  const stage = document.getElementById(stageId)
-  const stageRect = stage.getBoundingClientRect()
-  const x = (e.clientX - stageRect.left) * (UV_SIZE / (stageRect.width))
-  const y = (e.clientY - stageRect.top)  * (UV_SIZE / (stageRect.height))
+function applyTex(cv){
+  if(!mat) return
+  const t=new THREE.CanvasTexture(cv); t.flipY=false
+  mat.map=t; mat.color.set(0xffffff); mat.needsUpdate=true
+}
 
-  const ctx = canvas.getContext('2d')
-  ctx.globalCompositeOperation = S.mode === 'erase' ? 'destination-out' : 'source-over'
-  ctx.strokeStyle = S.color
-  ctx.lineWidth = S.brushSize
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-
-  if (uvLastPos) {
-    ctx.beginPath(); ctx.moveTo(uvLastPos.x, uvLastPos.y); ctx.lineTo(x, y); ctx.stroke()
-  } else {
-    ctx.beginPath(); ctx.arc(x, y, S.brushSize/2, 0, Math.PI*2)
-    ctx.fillStyle = S.mode === 'erase' ? 'rgba(0,0,0,1)' : S.color
-    ctx.fill()
+function uvFill(){
+  for(const id of['pc','pc-s']){
+    const cv=$(id); if(!cv) continue
+    const ctx=cv.getContext('2d'); ctx.globalCompositeOperation='source-over'
+    ctx.fillStyle=S.color; ctx.fillRect(0,0,UV,UV)
   }
-  uvLastPos = { x, y }
-
-  // Mirror to other canvas
-  const mirror = document.getElementById(mirrorId)
-  if (mirror) {
-    const mctx = mirror.getContext('2d')
-    mctx.clearRect(0,0,UV_SIZE,UV_SIZE)
-    mctx.drawImage(canvas, 0, 0)
-  }
-
-  // Apply to 3D mesh as texture
-  applyPaintToMesh(canvas)
+  applyTex($('pc'))
+}
+function uvClear(){
+  for(const id of['pc','pc-s']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
+  if(mat){mat.map=null;mat.color.set(0xcccccc);mat.needsUpdate=true}
+}
+function uvExport(){
+  const cv=$('pc'); if(!cv) return
+  const a=document.createElement('a')
+  a.download=(S.name?.replace(/\.[^.]+$/,'')||'texture')+'_uv.png'
+  a.href=cv.toDataURL('image/png'); a.click()
 }
 
-function applyPaintToMesh(canvas) {
-  if (!bakedMat) return
-  const tex = new THREE.CanvasTexture(canvas)
-  tex.flipY = false
-  bakedMat.map = tex
-  bakedMat.color.set(0xffffff)
-  bakedMat.needsUpdate = true
+// ─── VIEW SWITCHING ───────────────────────────────────────────────────
+function setView(v){
+  S.view=v
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'))
+  $('v3d').classList.toggle('on',v==='3d')
+  $('vuv').classList.toggle('on',v==='uv')
+  $('vsplit').classList.toggle('on',v==='split')
+  $('bv3').classList.toggle('a',v==='3d')
+  $('bvuv').classList.toggle('a',v==='uv')
+  $('bvsp').classList.toggle('a',v==='split')
+  if(v==='split') getSplitRenderer()
+  setTimeout(uvXform,10)
 }
 
-function uvFill() {
-  for (const id of ['paint-canvas','paint-canvas-split']) {
-    const canvas = document.getElementById(id)
-    if (!canvas) continue
-    const ctx = canvas.getContext('2d')
-    ctx.globalCompositeOperation = 'source-over'
-    ctx.fillStyle = S.color
-    ctx.fillRect(0,0,UV_SIZE,UV_SIZE)
-  }
-  applyPaintToMesh(document.getElementById('paint-canvas'))
-}
-
-function uvClear() {
-  for (const id of ['paint-canvas','paint-canvas-split']) {
-    const canvas = document.getElementById(id)
-    if (!canvas) continue
-    canvas.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
-  }
-  if (bakedMat) { bakedMat.map = null; bakedMat.color.set(0xcccccc); bakedMat.needsUpdate = true }
-}
-
-function uvExport() {
-  const canvas = document.getElementById('paint-canvas')
-  if (!canvas) return
-  const a = document.createElement('a')
-  a.download = (S.meshName?.replace(/\.[^.]+$/,'') ?? 'texture') + '_uvmap.png'
-  a.href = canvas.toDataURL('image/png')
-  a.click()
-}
-
-// ═══════════════════════════════════════════════════════════════
-// VIEW SWITCHING
-// ═══════════════════════════════════════════════════════════════
-function setView(v) {
-  S.activeView = v
-  document.getElementById('view-3d').classList.toggle('active', v === '3d')
-  document.getElementById('view-uv').classList.toggle('active', v === 'uv')
-  document.getElementById('view-split').classList.toggle('active', v === 'split')
-  document.getElementById('btn-3d').classList.toggle('active', v === '3d')
-  document.getElementById('btn-uv').classList.toggle('active', v === 'uv')
-  document.getElementById('btn-split').classList.toggle('active', v === 'split')
-
-  // Move renderer canvas to right container
-  setTimeout(() => {
-    const wrap = v === 'split'
-      ? document.getElementById('canvas3d-wrap-split')
-      : document.getElementById('canvas3d-wrap')
-    if (wrap && renderer.domElement.parentElement !== wrap) {
-      wrap.appendChild(renderer.domElement)
-    }
-    updateStageTransform()
-    updateStageTransform('split')
-  }, 0)
-}
-
-// ═══════════════════════════════════════════════════════════════
-// INSPECTOR CONTROLS
-// ═══════════════════════════════════════════════════════════════
-const PALETTE = ['#ffffff','#000000','#ff3b3b','#ff8c00','#ffb800','#39ff6e','#00e5ff','#0066ff','#9b59b6','#ff69b4','#8B4513','#888888']
-
-function buildPalette() {
-  const el = document.getElementById('palette')
-  PALETTE.forEach(c => {
-    const btn = document.createElement('button')
-    btn.className = 'swatch' + (c === S.color ? ' active' : '')
-    btn.style.background = c
-    btn.title = c
-    btn.onclick = () => setColor(c)
-    el.appendChild(btn)
+// ─── INSPECTOR ────────────────────────────────────────────────────────
+const PAL=['#ffffff','#000000','#ff3b3b','#ff8c00','#ffb800','#39ff6e','#00e5ff','#0066ff','#9b59b6','#ff69b4','#8B4513','#888888']
+function buildPalette(){
+  const el=$('pal')
+  PAL.forEach(c=>{
+    const b=document.createElement('button'); b.className='sw'+(c===S.color?' on':'')
+    b.style.background=c; b.title=c; b.onclick=()=>setColor(c); el.appendChild(b)
   })
 }
-
-function setColor(c) {
-  S.color = c
-  document.getElementById('color-pick').value = c
-  document.getElementById('color-hex').textContent = c.toUpperCase()
-  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.title === c))
+function setColor(c){
+  S.color=c; $('cpick').value=c; $('chex').textContent=c.toUpperCase()
+  document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('on',s.title===c))
+}
+function setMode(m){
+  S.mode=m
+  $('m-paint').classList.toggle('on',m==='paint')
+  $('m-erase').classList.toggle('on',m==='erase')
+}
+function refreshUVInfo(){
+  $('i-uvs').textContent=S.uvs?'YES':'NONE'
+  $('i-uvs').className='ival'+(S.uvs?' ok':'')
+  $('fdot').style.background=S.uvs?'var(--ok)':'var(--txt3)'
+  $('fdot').style.boxShadow=S.uvs?'0 0 6px var(--ok)':'none'
+  $('ftxt').textContent=S.uvs?'READY':'NO UVS'
 }
 
-function onColorChange(c) {
-  setColor(c)
+// ─── STATUS ───────────────────────────────────────────────────────────
+function setStatus(msg,type=''){
+  $('stxt').textContent=msg
+  const col={ok:'var(--ok)',load:'var(--warn)',err:'var(--err)'}[type]||'var(--txt3)'
+  $('sdot').style.background=col; $('stxt').style.color=col
+  $('sdot').style.boxShadow=type==='ok'?'0 0 6px var(--ok)':'none'
+  const sb=$('statusbar'); sb.querySelector('.spin')?.remove()
+  if(type==='load'){const sp=document.createElement('div');sp.className='spin';sb.insertBefore(sp,$('sdot'))}
 }
 
-function onBrushChange(v) {
-  S.brushSize = +v
-  document.getElementById('brush-val').textContent = v
+// ─── RESET ────────────────────────────────────────────────────────────
+function resetAll(){
+  if(meshObj){scene.remove(meshObj);meshObj.geometry.dispose();meshObj.material.dispose();meshObj=null;mat=null}
+  S.mesh=null;S.name=null;S.uvs=false
+  for(const id of['pc','pc-s','wc','wc-s']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
+  $('no-mesh').style.display=''; $('drop-hint').style.display=''
+  $('btn-unwrap').disabled=true; $('btn-reset').style.display='none'
+  $('i-file').textContent='—'; $('i-verts').textContent='—'; $('i-tris').textContent='—'
+  $('no-uv').style.display=''; $('split-no-uv').style.display=''
+  refreshUVInfo(); setStatus('Drop a mesh to begin'); OC.reset(); setView('3d')
 }
 
-function setMode(m) {
-  S.mode = m
-  document.getElementById('mode-paint').classList.toggle('active', m === 'paint')
-  document.getElementById('mode-erase').classList.toggle('active', m === 'erase')
-}
-
-function updateUVInfo() {
-  const el = document.getElementById('info-uvs')
-  const foot = document.getElementById('foot-txt')
-  const dot = document.getElementById('foot-dot')
-  if (S.hasUVs) {
-    el.textContent = 'YES'
-    el.className = 'row-val ok'
-    foot.textContent = 'READY'
-    dot.style.background = 'var(--ok)'
-    dot.style.boxShadow = '0 0 6px var(--ok)'
-  } else {
-    el.textContent = 'NONE'
-    el.className = 'row-val'
-    foot.textContent = 'NO UVS'
-    dot.style.background = 'var(--txt3)'
-    dot.style.boxShadow = 'none'
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// STATUS
-// ═══════════════════════════════════════════════════════════════
-function setStatus(msg, type = 'idle') {
-  const txt = document.getElementById('status-txt')
-  const dot = document.getElementById('status-dot')
-  const bar = document.getElementById('status-bar')
-  txt.textContent = msg
-
-  // Remove old spinner if any
-  bar.querySelector('.spinner')?.remove()
-
-  const colors = { idle:'var(--txt3)', ok:'var(--ok)', loading:'var(--warn)', error:'var(--err)' }
-  dot.style.background = colors[type] || colors.idle
-  dot.style.boxShadow = type === 'ok' ? '0 0 6px var(--ok)' : 'none'
-  txt.style.color = colors[type] || colors.idle
-
-  if (type === 'loading') {
-    const sp = document.createElement('div')
-    sp.className = 'spinner'
-    bar.insertBefore(sp, dot)
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RESET
-// ═══════════════════════════════════════════════════════════════
-function resetAll() {
-  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose(); meshObj = null }
-  bakedMat = null
-  S.mesh = null; S.meshName = null; S.hasUVs = false
-
-  for (const id of ['paint-canvas','paint-canvas-split']) {
-    document.getElementById(id)?.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
-  }
-  for (const id of ['wire-canvas','wire-canvas-split']) {
-    document.getElementById(id)?.getContext('2d').clearRect(0,0,UV_SIZE,UV_SIZE)
-  }
-
-  document.getElementById('no-mesh-hint').style.display = ''
-  document.getElementById('drop-hint').style.display = ''
-  document.getElementById('btn-unwrap').disabled = true
-  document.getElementById('btn-reset').style.display = 'none'
-  document.getElementById('info-file').textContent = '—'
-  document.getElementById('info-verts').textContent = '—'
-  document.getElementById('info-tris').textContent = '—'
-  document.getElementById('no-uv-hint').style.display = ''
-  if (document.getElementById('no-uv-hint-split'))
-    document.getElementById('no-uv-hint-split').style.display = ''
-  updateUVInfo()
-  setStatus('Drop a mesh to begin', 'idle')
-  orbit.reset()
-  setView('3d')
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DRAG AND DROP
-// ═══════════════════════════════════════════════════════════════
-document.addEventListener('dragenter', () => document.getElementById('drop-overlay').classList.add('show'))
-document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.getElementById('drop-overlay').classList.remove('show') })
-document.addEventListener('dragover', e => e.preventDefault())
-document.addEventListener('drop', async e => {
-  e.preventDefault()
-  document.getElementById('drop-overlay').classList.remove('show')
-  const file = e.dataTransfer.files?.[0]
-  if (file) await loadFile(file)
+// ─── DRAG & DROP ──────────────────────────────────────────────────────
+document.addEventListener('dragenter',()=>$('drop-ov').classList.add('on'))
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop-ov').classList.remove('on')})
+document.addEventListener('dragover',e=>e.preventDefault())
+document.addEventListener('drop',async e=>{
+  e.preventDefault(); $('drop-ov').classList.remove('on')
+  const f=e.dataTransfer.files?.[0]; if(f) await loadFile(f)
 })
 
-// ═══════════════════════════════════════════════════════════════
-// INIT CANVASES
-// ═══════════════════════════════════════════════════════════════
-function initCanvases() {
-  for (const id of ['checker-canvas','checker-canvas-split','paint-canvas','paint-canvas-split','wire-canvas','wire-canvas-split']) {
-    const c = document.getElementById(id)
-    if (c) { c.width = UV_SIZE; c.height = UV_SIZE }
-  }
-  drawChecker('checker-canvas')
-  drawChecker('checker-canvas-split')
-  initUVArea('uv-canvas-area', 'uv-stage')
-  initUVArea('uv-canvas-area-split', 'uv-stage-split')
-  updateStageTransform()
-  updateStageTransform('split')
-}
-
+// ─── INIT ─────────────────────────────────────────────────────────────
+;['cc','cc-s','pc','pc-s','wc','wc-s'].forEach(id=>{const cv=$(id);if(cv){cv.width=UV;cv.height=UV}})
+drawChecker()
 buildPalette()
-initCanvases()
-setStatus('Drop a mesh to begin', 'idle')
+setupUVArea('uvarea','uvstage',false)
+setupUVArea('split-uvarea','split-uvstage',true)
+uvXform()
+setStatus('Drop a mesh to begin')
 </script>
 </body>
 </html>
