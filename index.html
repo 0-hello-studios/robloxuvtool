@@ -425,27 +425,196 @@ function setGeo(geo, name){
   refreshUVInfo(); drawWire(); drawChecker()
 }
 
-// ─── UV UNWRAP ────────────────────────────────────────────────────────
+// ─── UV UNWRAP — cube projection + island packing ─────────────────────
 function doUnwrap(){
   if(!S.mesh) return
-  setStatus('Generating UVs...','load')
+  setStatus('Unwrapping...','load')
   $('btn-unwrap').disabled=true
   setTimeout(()=>{
     try{
-      const geo=S.mesh,pos=geo.attributes.position,n=pos.count
-      geo.computeBoundingBox()
-      const c=new THREE.Vector3(); geo.boundingBox.getCenter(c)
-      const uv=new Float32Array(n*2)
-      for(let i=0;i<n;i++){
-        const x=pos.getX(i)-c.x,y=pos.getY(i)-c.y,z=pos.getZ(i)-c.z
-        const l=Math.sqrt(x*x+y*y+z*z)||1
-        uv[i*2]  =0.5+Math.atan2(z/l,x/l)/(2*Math.PI)
-        uv[i*2+1]=0.5-Math.asin(Math.max(-1,Math.min(1,y/l)))/Math.PI
+      const geo = S.mesh
+      const pos = geo.attributes.position
+      const idx = geo.index
+
+      // Build triangle list (vertex index triples)
+      const tris = []
+      if(idx){
+        for(let i=0;i<idx.count;i+=3) tris.push([idx.getX(i),idx.getX(i+1),idx.getX(i+2)])
+      } else {
+        for(let i=0;i<pos.count;i+=3) tris.push([i,i+1,i+2])
       }
-      geo.setAttribute('uv',new THREE.BufferAttribute(uv,2))
-      S.uvs=true; refreshUVInfo(); drawWire(); drawChecker()
-      setStatus('UVs generated','ok'); setView('uv')
-    }catch(e){ setStatus('Unwrap failed: '+e.message,'err') }
+
+      // For each triangle compute face normal
+      const v0=new THREE.Vector3(), v1=new THREE.Vector3(), v2=new THREE.Vector3()
+      const e1=new THREE.Vector3(), e2=new THREE.Vector3(), fn=new THREE.Vector3()
+
+      // 6 axis buckets: +X -X +Y -Y +Z -Z
+      // Each bucket: array of { triIdx, verts:[{vi,x,y,z},...] }
+      const buckets = [[],[],[],[],[],[]]
+
+      tris.forEach((tri,ti)=>{
+        v0.set(pos.getX(tri[0]),pos.getY(tri[0]),pos.getZ(tri[0]))
+        v1.set(pos.getX(tri[1]),pos.getY(tri[1]),pos.getZ(tri[1]))
+        v2.set(pos.getX(tri[2]),pos.getY(tri[2]),pos.getZ(tri[2]))
+        e1.subVectors(v1,v0); e2.subVectors(v2,v0)
+        fn.crossVectors(e1,e2).normalize()
+
+        // Pick dominant axis
+        const ax=Math.abs(fn.x), ay=Math.abs(fn.y), az=Math.abs(fn.z)
+        let bucket
+        if(ax>=ay&&ax>=az) bucket = fn.x>0?0:1
+        else if(ay>=ax&&ay>=az) bucket = fn.y>0?2:3
+        else bucket = fn.z>0?4:5
+
+        buckets[bucket].push({
+          tri,
+          verts:[
+            {vi:tri[0],x:pos.getX(tri[0]),y:pos.getY(tri[0]),z:pos.getZ(tri[0])},
+            {vi:tri[1],x:pos.getX(tri[1]),y:pos.getY(tri[1]),z:pos.getZ(tri[1])},
+            {vi:tri[2],x:pos.getX(tri[2]),y:pos.getY(tri[2]),z:pos.getZ(tri[2])},
+          ]
+        })
+      })
+
+      // Project each bucket onto its plane, collect islands
+      // Axis projections: +X/-X → (z,y), +Y/-Y → (x,z), +Z/-Z → (x,y)
+      const projAxes = [
+        (v)=>[v.z, v.y],  // +X
+        (v)=>[-v.z, v.y], // -X
+        (v)=>[v.x, v.z],  // +Y
+        (v)=>[v.x,-v.z],  // -Y
+        (v)=>[v.x, v.y],  // +Z
+        (v)=>[-v.x, v.y], // -Z
+      ]
+
+      // Islands: each island has a list of {vi, u, v} and its bounding box
+      const islands = []
+
+      buckets.forEach((bucket,bi)=>{
+        if(!bucket.length) return
+        const proj = projAxes[bi]
+        const pts = [] // {vi, pu, pv}
+
+        bucket.forEach(f=>{
+          f.verts.forEach(v=>{
+            const [pu,pv]=proj(v)
+            pts.push({vi:v.vi, pu, pv})
+          })
+        })
+
+        // Normalize this island to [0,1]
+        let minU=Infinity,maxU=-Infinity,minV=Infinity,maxV=-Infinity
+        pts.forEach(p=>{ minU=Math.min(minU,p.pu); maxU=Math.max(maxU,p.pu); minV=Math.min(minV,p.pv); maxV=Math.max(maxV,p.pv) })
+        const rangeU=maxU-minU||1, rangeV=maxV-minV||1
+        const aspect=rangeU/rangeV
+
+        const localPts = pts.map(p=>({
+          vi:p.vi,
+          lu:(p.pu-minU)/rangeU,
+          lv:(p.pv-minV)/rangeV
+        }))
+
+        islands.push({ pts:localPts, aspect, triCount:bucket.length })
+      })
+
+      // ── Pack islands into UV space ──
+      // Shelf packing: sort by height desc, place left-to-right with padding
+      const PAD = 0.01
+      const totalTris = tris.length
+
+      // Weight each island size by its triangle count
+      islands.sort((a,b)=>b.triCount-a.triCount)
+
+      // Assign each island a slot in a 3×2 or flexible grid
+      // Simple row-based packing
+      const n = islands.length
+      if(n===0){ setStatus('No triangles found','err'); $('btn-unwrap').disabled=false; return }
+
+      // Determine grid cols/rows
+      const cols = Math.ceil(Math.sqrt(n*1.5))
+      const rows = Math.ceil(n/cols)
+      const cellW = (1-PAD*(cols+1))/cols
+      const cellH = (1-PAD*(rows+1))/rows
+
+      // Build final UV array — needs to be non-indexed (per triangle-vertex)
+      // so we can assign different UVs to the same vertex in different islands
+      const vertCount = tris.length*3
+      const uvOut = new Float32Array(vertCount*2)
+      const newPos  = new Float32Array(vertCount*3)
+      const newNorm = geo.attributes.normal ? new Float32Array(vertCount*3) : null
+
+      // Map: triIndex → islandIndex, posInIsland
+      // We stored tris in buckets, we need to know which island each tri belongs to
+      // and where its verts land in the island's local UV
+
+      // Rebuild: for each bucket, store tri index and per-vert local UV
+      const triFinalUV = new Array(tris.length) // [{u0,v0,u1,v1,u2,v2}]
+
+      let islandIdx=0
+      buckets.forEach((bucket,bi)=>{
+        if(!bucket.length) return
+        const proj = projAxes[bi]
+
+        // Normalize
+        let minU=Infinity,maxU=-Infinity,minV=Infinity,maxV=-Infinity
+        bucket.forEach(f=>f.verts.forEach(v=>{
+          const[pu,pv]=proj(v); minU=Math.min(minU,pu); maxU=Math.max(maxU,pu); minV=Math.min(minV,pv); maxV=Math.max(maxV,pv)
+        }))
+        const rU=maxU-minU||1, rV=maxV-minV||1
+
+        // Island position in UV space
+        const col=islandIdx%cols, row=Math.floor(islandIdx/cols)
+        const offU=PAD*(col+1)+col*cellW
+        const offV=PAD*(row+1)+row*cellH
+
+        bucket.forEach(f=>{
+          const uvs=f.verts.map(v=>{
+            const[pu,pv]=proj(v)
+            return {
+              u: offU + ((pu-minU)/rU)*cellW,
+              v: offV + ((pv-minV)/rV)*cellH
+            }
+          })
+          triFinalUV[tris.indexOf(f.tri)]={u0:uvs[0].u,v0:uvs[0].v,u1:uvs[1].u,v1:uvs[1].v,u2:uvs[2].u,v2:uvs[2].v}
+        })
+        islandIdx++
+      })
+
+      // Build non-indexed geometry
+      const origNorm = geo.attributes.normal
+      tris.forEach((tri,ti)=>{
+        const fuv=triFinalUV[ti]||{u0:.5,v0:.5,u1:.5,v1:.5,u2:.5,v2:.5}
+        const uvPairs=[[fuv.u0,fuv.v0],[fuv.u1,fuv.v1],[fuv.u2,fuv.v2]]
+        tri.forEach((vi,k)=>{
+          const base=(ti*3+k)
+          newPos[base*3]  =pos.getX(vi)
+          newPos[base*3+1]=pos.getY(vi)
+          newPos[base*3+2]=pos.getZ(vi)
+          uvOut[base*2]  =uvPairs[k][0]
+          uvOut[base*2+1]=uvPairs[k][1]
+          if(newNorm&&origNorm){
+            newNorm[base*3]  =origNorm.getX(vi)
+            newNorm[base*3+1]=origNorm.getY(vi)
+            newNorm[base*3+2]=origNorm.getZ(vi)
+          }
+        })
+      })
+
+      const newGeo=new THREE.BufferGeometry()
+      newGeo.setAttribute('position',new THREE.BufferAttribute(newPos,3))
+      newGeo.setAttribute('uv',new THREE.BufferAttribute(uvOut,2))
+      if(newNorm) newGeo.setAttribute('normal',new THREE.BufferAttribute(newNorm,3))
+      else newGeo.computeVertexNormals()
+
+      // Replace mesh geometry
+      S.mesh=newGeo
+      if(meshObj){ meshObj.geometry.dispose(); meshObj.geometry=newGeo }
+
+      S.uvs=true
+      refreshUVInfo(); drawWire(); drawChecker()
+      setStatus(`Unwrapped — ${n} islands`,'ok')
+      setView('uv')
+    }catch(e){ setStatus('Unwrap failed: '+e.message,'err'); console.error(e) }
     $('btn-unwrap').disabled=false
   },30)
 }
