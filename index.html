@@ -6,352 +6,399 @@
 <title>UV FORGE</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <style>
-:root {
-  --bg:#080808; --panel:#101010; --hover:#1c1c1c;
-  --border:#242424; --borderB:#333;
-  --accent:#00e5ff; --accentD:#00b8cc; --accentG:rgba(0,229,255,.12);
-  --txt:#e0e0e0; --txt2:#777; --txt3:#444;
-  --ok:#39ff6e; --warn:#ffb800; --err:#ff3b3b;
-  --mono:'Space Mono',monospace; --ui:'Rajdhani',sans-serif;
+:root{
+  --bg:#080808;--panel:#101010;--hover:#1c1c1c;
+  --border:#242424;--bB:#333;
+  --ac:#00e5ff;--acD:#00b8cc;--acG:rgba(0,229,255,.12);
+  --t:#e0e0e0;--t2:#777;--t3:#444;
+  --ok:#39ff6e;--warn:#ffb800;--err:#ff3b3b;
+  --mo:'Space Mono',monospace;--ui:'Rajdhani',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body,#app{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ui)}
-button{font-family:var(--ui);cursor:pointer;border:none;outline:none;transition:opacity .12s}
-button:hover{opacity:.82} button:active{opacity:.65}
-input[type=range]{accent-color:var(--accent);cursor:pointer;width:100%}
+html,body,#app{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:var(--ui)}
+button{font-family:var(--ui);cursor:pointer;border:none;outline:none;transition:opacity .1s}
+button:hover{opacity:.8} button:active{opacity:.6}
+input[type=range]{accent-color:var(--ac);cursor:pointer;width:100%}
 input[type=color]{cursor:pointer;border:none;background:none;padding:0}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:var(--panel)}
-::-webkit-scrollbar-thumb{background:var(--borderB);border-radius:2px}
-
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--bB);border-radius:2px}
 #app{display:flex;flex-direction:column}
 
 /* TOOLBAR */
-#toolbar{
-  height:48px;background:var(--panel);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;
-}
-#logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.2em;margin-right:14px;display:flex;align-items:center;gap:5px}
-#logo em{opacity:.35;font-style:normal;font-size:9px}
-.sep{width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0}
-.tbtn{
-  display:flex;align-items:center;gap:5px;padding:5px 11px;
-  font-family:var(--mono);font-size:10px;letter-spacing:.08em;border-radius:2px;
-  background:var(--hover);color:var(--txt2);border:1px solid var(--border);white-space:nowrap
-}
-.tbtn.a{background:var(--accentG);color:var(--accent);border-color:var(--accentD)}
-.tbtn.d{background:rgba(255,59,59,.08);color:var(--err);border-color:rgba(255,59,59,.25)}
-.tbtn:disabled{opacity:.35;cursor:not-allowed}
-#statusbar{display:flex;align-items:center;gap:7px;margin-left:auto;padding:0 10px;min-width:0}
-#sdot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
-#stxt{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
+#tb{height:48px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0}
+#logo{font-family:var(--mo);font-size:12px;font-weight:700;color:var(--ac);
+  letter-spacing:.2em;margin-right:14px;display:flex;align-items:center;gap:5px}
+#logo em{opacity:.3;font-style:normal}
+.sp{width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0}
+.tb{display:flex;align-items:center;gap:5px;padding:5px 11px;font-family:var(--mo);
+  font-size:10px;letter-spacing:.08em;border-radius:2px;
+  background:var(--hover);color:var(--t2);border:1px solid var(--border);white-space:nowrap}
+.tb.a{background:var(--acG);color:var(--ac);border-color:var(--acD)}
+.tb.d{background:rgba(255,59,59,.08);color:var(--err);border-color:rgba(255,59,59,.25)}
+.tb:disabled{opacity:.35;cursor:not-allowed}
+#sb{display:flex;align-items:center;gap:7px;margin-left:auto;padding:0 10px;min-width:0}
+#sd{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:all .3s}
+#st{font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.06em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
 
 /* MAIN */
 #main{flex:1;display:flex;overflow:hidden;min-height:0}
-#vp-area{flex:1;position:relative;overflow:hidden;min-width:0}
-
-/* Views */
+#vpa{flex:1;position:relative;overflow:hidden;min-width:0}
 .view{position:absolute;inset:0;display:none;overflow:hidden}
 .view.on{display:flex}
 
 /* 3D */
-#v3d{position:relative}
-#canvas3d{position:absolute;inset:0;width:100%;height:100%;display:block}
-#no-mesh{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
-#no-mesh .ico{font-size:28px;opacity:.12}
-#no-mesh .lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em}
+#v3{position:relative;background:#0d0d0d}
+#c3{position:absolute;inset:0;width:100%;height:100%;display:block}
+#nmh{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+#nmh .ico{font-size:32px;opacity:.1}
+#nmh .lb{font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em}
 
 /* UV */
 #vuv{flex-direction:column}
-#uvtb{height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0}
-#uvtb .lbl{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:2px}
-.uvbtn{padding:3px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;background:var(--hover);color:var(--txt2);border:1px solid var(--border);border-radius:2px}
-.uvbtn.a{background:var(--accent);color:#000;font-weight:700;border-color:var(--accent)}
-#uvzoom{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto}
-#uvarea{flex:1;overflow:hidden;position:relative;cursor:crosshair;min-height:0}
-#uvstage{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
-#uvstage canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
-#no-uv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none}
+#uvtb{height:36px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0}
+.ub{padding:3px 10px;font-family:var(--mo);font-size:10px;letter-spacing:.08em;
+  background:var(--hover);color:var(--t2);border:1px solid var(--border);border-radius:2px}
+.ub.a{background:var(--ac);color:#000;font-weight:700;border-color:var(--ac)}
+#uvz{font-family:var(--mo);font-size:10px;color:var(--t3);margin-left:auto}
+#uva{flex:1;overflow:hidden;position:relative;min-height:0}
+#uvs{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
+#uvs canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
+#nuv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em;pointer-events:none}
 
 /* SPLIT */
-#vsplit{gap:0}
-#split-3d{flex:1;position:relative;overflow:hidden;border-right:1px solid var(--border)}
-#split-uv{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#split-uvarea{flex:1;overflow:hidden;position:relative;cursor:crosshair;min-height:0}
-#split-uvstage{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
-#split-uvstage canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
-#split-no-uv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;pointer-events:none}
+#vsp{gap:0}
+#sp3{flex:1;position:relative;overflow:hidden;border-right:1px solid var(--border);background:#0d0d0d}
+#spuv{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#spuva{flex:1;overflow:hidden;position:relative;min-height:0}
+#spuvs{position:absolute;transform-origin:0 0;width:1024px;height:1024px}
+#spuvs canvas{position:absolute;top:0;left:0;width:1024px;height:1024px}
+#spnuv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em;pointer-events:none}
 
 /* INSPECTOR */
-#insp{width:210px;height:100%;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+#ins{width:220px;height:100%;background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
 .sec{border-bottom:1px solid var(--border);padding:10px 12px}
-.stitle{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.14em;margin-bottom:10px}
+.stl{font-family:var(--mo);font-size:9px;color:var(--t3);letter-spacing:.14em;margin-bottom:10px}
 .irow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.ilbl{font-family:var(--mono);font-size:10px;color:var(--txt3)}
-.ival{font-family:var(--mono);font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.ival.ok{color:var(--ok)}
-.flbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.08em;margin-bottom:6px;display:block}
-.mrow{display:flex;gap:6px;margin-bottom:12px}
-.mbtn{flex:1;padding:5px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;background:var(--bg);color:var(--txt3);border:1px solid var(--border);border-radius:2px}
-.mbtn.on{background:var(--accentG);color:var(--accent);border-color:var(--accent)}
-#crow{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-#cpick{width:34px;height:26px;border:1px solid var(--border);border-radius:2px}
-#chex{flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;font-size:10px;font-family:var(--mono);color:var(--txt2);border-radius:2px}
-.palette{display:flex;flex-wrap:wrap;gap:4px}
+.il{font-family:var(--mo);font-size:10px;color:var(--t3)}
+.iv{font-family:var(--mo);font-size:10px;color:var(--t2);max-width:130px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.iv.ok{color:var(--ok)}
+.fl{font-family:var(--mo);font-size:9px;color:var(--t3);letter-spacing:.08em;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
+.fl span{color:var(--ac)}
+
+/* TOOL BUTTONS */
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px}
+.tool{padding:6px 0;font-family:var(--mo);font-size:9px;letter-spacing:.06em;
+  background:var(--bg);color:var(--t3);border:1px solid var(--border);border-radius:2px;
+  display:flex;flex-direction:column;align-items:center;gap:3px}
+.tool .ti{font-size:14px;line-height:1}
+.tool.on{background:var(--acG);color:var(--ac);border-color:var(--ac)}
+
+/* COLOR ROW */
+#cr{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+#cp{width:36px;height:28px;border:1px solid var(--border);border-radius:2px;flex-shrink:0}
+#ch{flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;
+  font-size:10px;font-family:var(--mo);color:var(--t2);border-radius:2px;cursor:text}
+/* secondary color for gradient */
+#cr2{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+#cp2{width:36px;height:28px;border:1px solid var(--border);border-radius:2px;flex-shrink:0}
+#ch2{flex:1;background:var(--bg);border:1px solid var(--border);padding:4px 7px;
+  font-size:10px;font-family:var(--mo);color:var(--t2);border-radius:2px}
+#grad-lbl{font-family:var(--mo);font-size:8px;color:var(--t3);letter-spacing:.06em;margin-bottom:8px}
+
+.pal{display:flex;flex-wrap:wrap;gap:4px}
 .sw{width:23px;height:23px;border-radius:2px;cursor:pointer;border:1px solid var(--border)}
-.sw.on{border:2px solid var(--accent)}
+.sw.on{border:2px solid var(--ac)}
+
+/* Color history */
+#hist{display:flex;gap:3px;margin-bottom:10px}
+.hc{width:18px;height:18px;border-radius:2px;cursor:pointer;border:1px solid var(--border);flex-shrink:0}
+
 #ifoot{margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
-#fdot{width:6px;height:6px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:all .3s}
-#ftxt{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.06em}
+#fdot{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:all .3s}
+#ftx{font-family:var(--mo);font-size:9px;color:var(--t3);letter-spacing:.06em}
 
-/* DROP */
-#drop-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:7px 18px;pointer-events:none}
-#drop-hint span{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em}
-#drop-ov{position:fixed;inset:0;background:rgba(0,229,255,.04);border:2px solid var(--accent);display:none;z-index:100;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:.2em}
-#drop-ov.on{display:flex}
-
+#dh{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--border);border-radius:3px;
+  padding:7px 18px;pointer-events:none}
+#dh span{font-family:var(--mo);font-size:10px;color:var(--ac);letter-spacing:.1em}
+#dov{position:fixed;inset:0;background:rgba(0,229,255,.04);border:2px solid var(--ac);
+  display:none;z-index:100;align-items:center;justify-content:center;
+  font-family:var(--mo);font-size:14px;color:var(--ac);letter-spacing:.2em}
+#dov.on{display:flex}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:8px;height:8px;border:1.5px solid var(--warn);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+.spin{width:8px;height:8px;border:1.5px solid var(--warn);border-top-color:transparent;
+  border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+
+/* gradient preview line */
+#grad-prev{position:absolute;pointer-events:none;z-index:10;display:none}
 </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- TOOLBAR -->
-  <div id="toolbar">
+  <div id="tb">
     <div id="logo"><em>◈</em> UV FORGE</div>
-    <div class="sep"></div>
-    <input type="file" id="finput" accept=".obj,.glb" style="display:none"/>
-    <button class="tbtn" onclick="document.getElementById('finput').click()">⬡ LOAD MESH</button>
-    <button class="tbtn a" id="btn-unwrap" disabled onclick="doUnwrap()">⊞ AUTO UNWRAP</button>
-    <div class="sep"></div>
-    <button class="tbtn a" id="bv3"  onclick="setView('3d')">3D</button>
-    <button class="tbtn"   id="bvuv" onclick="setView('uv')">UV</button>
-    <button class="tbtn"   id="bvsp" onclick="setView('split')">SPLIT</button>
-    <div id="statusbar">
-      <div id="sdot"></div>
-      <div id="stxt">Drop a mesh to begin</div>
-    </div>
-    <div class="sep"></div>
-    <button class="tbtn d" id="btn-reset" style="display:none" onclick="resetAll()">✕ RESET</button>
+    <div class="sp"></div>
+    <input type="file" id="fi" accept=".obj,.glb,.gltf,.fbx" style="display:none"/>
+    <button class="tb" onclick="$('fi').click()">⬡ LOAD MESH</button>
+    <button class="tb a" id="buw" disabled onclick="doUnwrap()">⊞ AUTO UNWRAP</button>
+    <div class="sp"></div>
+    <button class="tb a" id="b3"  onclick="setView('3d')">3D</button>
+    <button class="tb"   id="buv" onclick="setView('uv')">UV</button>
+    <button class="tb"   id="bsp" onclick="setView('split')">SPLIT</button>
+    <div id="sb"><div id="sd"></div><div id="st">Drop a mesh to begin</div></div>
+    <div class="sp"></div>
+    <button class="tb d" id="brs" style="display:none" onclick="resetAll()">✕ RESET</button>
   </div>
 
-  <!-- MAIN -->
   <div id="main">
-    <div id="vp-area">
-
-      <!-- 3D VIEW -->
-      <div class="view on" id="v3d">
-        <canvas id="canvas3d"></canvas>
-        <div id="no-mesh">
-          <div class="ico">⬡</div>
-          <div class="lbl">NO MESH LOADED</div>
-        </div>
+    <div id="vpa">
+      <!-- 3D -->
+      <div class="view on" id="v3">
+        <canvas id="c3"></canvas>
+        <div id="nmh"><div class="ico">⬡</div><div class="lb">NO MESH LOADED</div></div>
       </div>
 
-      <!-- UV VIEW -->
+      <!-- UV -->
       <div class="view" id="vuv">
         <div id="uvtb">
-          <span class="lbl">UV</span>
-          <button class="uvbtn" onclick="uvFill()">FILL</button>
-          <button class="uvbtn" onclick="uvClear()">CLEAR</button>
-          <span id="uvzoom">ZOOM 100%</span>
-          <button class="uvbtn a" onclick="uvExport()">EXPORT PNG</button>
+          <span style="font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em;margin-right:4px">UV</span>
+          <button class="ub" onclick="uvFill()">FILL</button>
+          <button class="ub" onclick="uvClear()">CLEAR</button>
+          <button class="ub" onclick="uvFlipH()">FLIP H</button>
+          <button class="ub" onclick="uvFlipV()">FLIP V</button>
+          <span id="uvz" style="font-family:var(--mo);font-size:10px;color:var(--t3);margin-left:auto">100%</span>
+          <button class="ub a" onclick="uvExport()">EXPORT PNG</button>
         </div>
-        <div id="uvarea">
-          <div id="uvstage">
+        <div id="uva">
+          <div id="uvs">
             <canvas id="cc"></canvas>
             <canvas id="pc"></canvas>
             <canvas id="wc"></canvas>
           </div>
-          <div id="no-uv">NO UV DATA</div>
+          <div id="nuv">NO UV DATA</div>
+          <canvas id="grad-prev" width="1" height="1" style="position:absolute;inset:0;pointer-events:none;display:none"></canvas>
         </div>
       </div>
 
-      <!-- SPLIT VIEW -->
-      <div class="view" id="vsplit">
-        <div id="split-3d"></div>
-        <div id="split-uv">
+      <!-- SPLIT -->
+      <div class="view" id="vsp">
+        <div id="sp3"></div>
+        <div id="spuv">
           <div style="height:36px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0">
-            <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:.12em;margin-right:2px">UV</span>
-            <button class="uvbtn" onclick="uvFill()">FILL</button>
-            <button class="uvbtn" onclick="uvClear()">CLEAR</button>
-            <span id="uvzoom-s" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-left:auto">ZOOM 100%</span>
-            <button class="uvbtn a" onclick="uvExport()">EXPORT PNG</button>
+            <span style="font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em;margin-right:2px">UV</span>
+            <button class="ub" onclick="uvFill()">FILL</button>
+            <button class="ub" onclick="uvClear()">CLEAR</button>
+            <span id="spuvz" style="font-family:var(--mo);font-size:10px;color:var(--t3);margin-left:auto">100%</span>
+            <button class="ub a" onclick="uvExport()">EXPORT PNG</button>
           </div>
-          <div id="split-uvarea">
-            <div id="split-uvstage">
-              <canvas id="cc-s"></canvas>
-              <canvas id="pc-s"></canvas>
-              <canvas id="wc-s"></canvas>
+          <div id="spuva">
+            <div id="spuvs">
+              <canvas id="cc2"></canvas>
+              <canvas id="pc2"></canvas>
+              <canvas id="wc2"></canvas>
             </div>
-            <div id="split-no-uv">NO UV DATA</div>
+            <div id="spnuv">NO UV DATA</div>
           </div>
         </div>
       </div>
-
     </div>
 
     <!-- INSPECTOR -->
-    <div id="insp">
+    <div id="ins">
       <div class="sec">
-        <div class="stitle">MESH</div>
-        <div class="irow"><span class="ilbl">FILE</span><span class="ival" id="i-file">—</span></div>
-        <div class="irow"><span class="ilbl">VERTS</span><span class="ival" id="i-verts">—</span></div>
-        <div class="irow"><span class="ilbl">TRIS</span><span class="ival" id="i-tris">—</span></div>
-        <div class="irow"><span class="ilbl">UVS</span><span class="ival" id="i-uvs">NONE</span></div>
+        <div class="stl">MESH</div>
+        <div class="irow"><span class="il">FILE</span><span class="iv" id="ifl">—</span></div>
+        <div class="irow"><span class="il">VERTS</span><span class="iv" id="ivt">—</span></div>
+        <div class="irow"><span class="il">TRIS</span><span class="iv" id="itr">—</span></div>
+        <div class="irow"><span class="il">UVS</span><span class="iv" id="iuv">NONE</span></div>
       </div>
+
       <div class="sec">
-        <div class="stitle">BRUSH</div>
-        <div class="mrow">
-          <button class="mbtn on" id="m-paint" onclick="setMode('paint')">PAINT</button>
-          <button class="mbtn"    id="m-erase" onclick="setMode('erase')">ERASE</button>
+        <div class="stl">TOOLS</div>
+        <div class="tools">
+          <button class="tool on" id="t-paint" onclick="setTool('paint')" title="Brush">
+            <span class="ti">🖌</span><span>BRUSH</span>
+          </button>
+          <button class="tool" id="t-erase" onclick="setTool('erase')" title="Eraser">
+            <span class="ti">⌫</span><span>ERASE</span>
+          </button>
+          <button class="tool" id="t-fill" onclick="setTool('fill')" title="Flood Fill">
+            <span class="ti">🪣</span><span>FILL</span>
+          </button>
+          <button class="tool" id="t-pick" onclick="setTool('pick')" title="Eyedropper">
+            <span class="ti">💉</span><span>PICK</span>
+          </button>
+          <button class="tool" id="t-grad" onclick="setTool('grad')" title="Gradient">
+            <span class="ti">↔</span><span>GRAD</span>
+          </button>
         </div>
-        <span class="flbl">COLOR</span>
-        <div id="crow">
-          <input type="color" id="cpick" value="#ffffff" oninput="setColor(this.value)"/>
-          <div id="chex">#FFFFFF</div>
+
+        <!-- Color history -->
+        <div class="stl">RECENT</div>
+        <div id="hist"></div>
+
+        <div class="fl"><span style="color:var(--t3)">COLOR A</span></div>
+        <div id="cr">
+          <input type="color" id="cp" value="#ffffff" oninput="setCol(this.value)"/>
+          <div id="ch">#FFFFFF</div>
         </div>
-        <span class="flbl">BRUSH SIZE — <b id="bval" style="color:var(--accent)">20</b>px</span>
-        <input type="range" id="bsize" min="1" max="120" value="20" oninput="S.brush=+this.value;document.getElementById('bval').textContent=this.value"/>
+        <div id="grad-lbl" style="display:none">COLOR B (gradient end)</div>
+        <div id="cr2" style="display:none">
+          <input type="color" id="cp2" value="#000000" oninput="S.col2=this.value;$('ch2').textContent=this.value.toUpperCase()"/>
+          <div id="ch2">#000000</div>
+        </div>
+
+        <div class="fl">OPACITY <span id="opv">100%</span></div>
+        <input type="range" id="opr" min="1" max="100" value="100"
+          oninput="S.opacity=+this.value/100;$('opv').textContent=this.value+'%'" style="margin-bottom:10px"/>
+
+        <div class="fl">SIZE <span id="bsv">20px</span></div>
+        <input type="range" id="bsr" min="1" max="200" value="20"
+          oninput="S.brush=+this.value;$('bsv').textContent=this.value+'px'" style="margin-bottom:10px"/>
+
+        <div class="fl">HARDNESS <span id="hdv">80%</span></div>
+        <input type="range" id="hdr" min="0" max="100" value="80"
+          oninput="S.hard=+this.value/100;$('hdv').textContent=this.value+'%'" style="margin-bottom:2px"/>
       </div>
+
       <div class="sec">
-        <div class="stitle">PALETTE</div>
-        <div class="palette" id="pal"></div>
+        <div class="stl">PALETTE</div>
+        <div class="pal" id="pal"></div>
       </div>
-      <div id="ifoot">
-        <div id="fdot"></div>
-        <div id="ftxt">NO UVS</div>
-      </div>
+
+      <div id="ifoot"><div id="fdot"></div><div id="ftx">NO UVS</div></div>
     </div>
   </div>
 </div>
-
-<div id="drop-hint"><span>DROP OBJ / GLB  ·  OR CLICK LOAD MESH</span></div>
-<div id="drop-ov">DROP MESH HERE</div>
+<div id="dh"><span>DROP OBJ / FBX / GLB  ·  OR CLICK LOAD MESH</span></div>
+<div id="dov">DROP MESH HERE</div>
 
 <script>
-const S = { mesh:null, name:null, uvs:false, color:'#ffffff', brush:20, mode:'paint', view:'3d' }
-const UV = 1024
-const $ = id => document.getElementById(id)
+// ── STATE ────────────────────────────────────────────────────────────────────
+const S={
+  mesh:null,name:null,uvs:false,
+  color:'#ffffff',col2:'#000000',
+  opacity:1,brush:20,hard:.8,
+  tool:'paint',  // paint | erase | fill | pick | grad
+  view:'3d',
+  gradStart:null,
+  colorHistory:[]
+}
+const UV=1024
+const $=id=>document.getElementById(id)
 
-// ─── THREE.JS ─────────────────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ canvas: $('canvas3d'), antialias: true })
+// ── THREE SETUP ──────────────────────────────────────────────────────────────
+const renderer=new THREE.WebGLRenderer({canvas:$('c3'),antialias:true})
 renderer.setPixelRatio(devicePixelRatio)
 renderer.setClearColor(0x0d0d0d)
 
-const scene = new THREE.Scene()
-scene.add(new THREE.GridHelper(10, 20, 0x1a1a1a, 0x141414))
-scene.add(new THREE.AmbientLight(0xffffff, 0.45))
-const kl = new THREE.DirectionalLight(0xffffff, 1.6); kl.position.set(3,5,4); scene.add(kl)
-const fl = new THREE.DirectionalLight(0x8899ff, 0.4); fl.position.set(-4,2,-3); scene.add(fl)
-const rl = new THREE.DirectionalLight(0x00e5ff, 0.25); rl.position.set(0,-2,-5); scene.add(rl)
+const scene=new THREE.Scene()
+scene.add(new THREE.GridHelper(10,20,0x1a1a1a,0x141414))
+scene.add(new THREE.AmbientLight(0xffffff,.45))
+const kl=new THREE.DirectionalLight(0xffffff,1.6);kl.position.set(3,5,4);scene.add(kl)
+scene.add(Object.assign(new THREE.DirectionalLight(0x8899ff,.4),{position:{set:(x,y,z)=>{}}}) || (() => {
+  const l=new THREE.DirectionalLight(0x8899ff,.4);l.position.set(-4,2,-3);return l
+})())
+const fl=new THREE.DirectionalLight(0x8899ff,.4);fl.position.set(-4,2,-3);scene.add(fl)
+const rl=new THREE.DirectionalLight(0x00e5ff,.25);rl.position.set(0,-2,-5);scene.add(rl)
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000)
-camera.position.set(0, 2, 5)
+const cam=new THREE.PerspectiveCamera(45,1,.01,1000)
+cam.position.set(0,2,5)
 
-// ─── INLINE ORBIT ────────────────────────────────────────────────────
-const OC = (() => {
-  const el = $('v3d')
-  let dn=false, px=0, py=0, theta=0.4, phi=1.1, r=5
-  const tgt = new THREE.Vector3()
-  let rdn=false, rx=0, ry=0
-  el.addEventListener('mousedown', e => {
+const OC=(()=>{
+  const el=$('v3'),tgt=new THREE.Vector3()
+  let dn=false,px=0,py=0,th=.4,ph=1.1,r=5
+  let rdn=false,rx=0,ry=0
+  el.addEventListener('mousedown',e=>{
     if(e.button===0){dn=true;px=e.clientX;py=e.clientY}
     if(e.button===2){rdn=true;rx=e.clientX;ry=e.clientY}
   })
-  window.addEventListener('mouseup', () => {dn=false;rdn=false})
-  window.addEventListener('mousemove', e => {
-    if(dn){
-      theta -= (e.clientX-px)*0.005
-      phi = Math.max(0.05, Math.min(Math.PI-0.05, phi-(e.clientY-py)*0.005))
-      px=e.clientX; py=e.clientY
-    }
-    if(rdn){
-      tgt.x -= (e.clientX-rx)*0.004*r
-      tgt.y += (e.clientY-ry)*0.004*r
-      rx=e.clientX; ry=e.clientY
-    }
+  window.addEventListener('mouseup',()=>{dn=false;rdn=false})
+  window.addEventListener('mousemove',e=>{
+    if(dn){th-=(e.clientX-px)*.005;ph=Math.max(.05,Math.min(Math.PI-.05,ph-(e.clientY-py)*.005));px=e.clientX;py=e.clientY}
+    if(rdn){tgt.x-=(e.clientX-rx)*.004*r;tgt.y+=(e.clientY-ry)*.004*r;rx=e.clientX;ry=e.clientY}
   })
-  el.addEventListener('wheel', e=>{ r=Math.max(0.5,Math.min(50,r+e.deltaY*0.01)) },{passive:true})
-  el.addEventListener('contextmenu', e=>e.preventDefault())
-  return {
+  el.addEventListener('wheel',e=>{r=Math.max(.5,Math.min(50,r+e.deltaY*.01))},{passive:true})
+  el.addEventListener('contextmenu',e=>e.preventDefault())
+  return{
     update(){
-      camera.position.x = tgt.x + r*Math.sin(phi)*Math.sin(theta)
-      camera.position.y = tgt.y + r*Math.cos(phi)
-      camera.position.z = tgt.z + r*Math.sin(phi)*Math.cos(theta)
-      camera.lookAt(tgt)
+      cam.position.x=tgt.x+r*Math.sin(ph)*Math.sin(th)
+      cam.position.y=tgt.y+r*Math.cos(ph)
+      cam.position.z=tgt.z+r*Math.sin(ph)*Math.cos(th)
+      cam.lookAt(tgt)
     },
-    reset(d=3.5){ r=d; theta=0.4; phi=1.1; tgt.set(0,0,0) }
+    reset(d=3.5){r=d;th=.4;ph=1.1;tgt.set(0,0,0)}
   }
 })()
 
-// Secondary renderer for split view (avoids moving canvas)
-let rSplit = null
-function getSplitRenderer(){
+let rSplit=null
+function getSR(){
   if(!rSplit){
-    rSplit = new THREE.WebGLRenderer({ antialias: true })
+    rSplit=new THREE.WebGLRenderer({antialias:true})
     rSplit.setPixelRatio(devicePixelRatio)
     rSplit.setClearColor(0x0d0d0d)
     rSplit.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%'
-    $('split-3d').appendChild(rSplit.domElement)
+    $('sp3').appendChild(rSplit.domElement)
   }
   return rSplit
 }
 
-let meshObj = null, mat = null
+let meshObj=null,mat=null
 
 function resizeAll(){
-  const v = $('v3d'), w=v.clientWidth, h=v.clientHeight
-  if(w>0&&h>0){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix() }
+  const el=$('v3'),w=el.clientWidth,h=el.clientHeight
+  if(w>0&&h>0){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
   if(S.view==='split'&&rSplit){
-    const sp=$('split-3d'), ws=sp.clientWidth, hs=sp.clientHeight
-    if(ws>0&&hs>0) rSplit.setSize(ws,hs,false)
+    const sp=$('sp3'),ws=sp.clientWidth,hs=sp.clientHeight
+    if(ws>0&&hs>0)rSplit.setSize(ws,hs,false)
   }
 }
 
 function animate(){
   requestAnimationFrame(animate)
-  OC.update()
-  resizeAll()
-  renderer.render(scene, camera)
-  if(S.view==='split'&&rSplit) rSplit.render(scene, camera)
+  OC.update();resizeAll()
+  renderer.render(scene,cam)
+  if(S.view==='split'&&rSplit)rSplit.render(scene,cam)
 }
 animate()
 
-// ─── FILE LOADING ─────────────────────────────────────────────────────
-$('finput').addEventListener('change', async e => {
-  const f=e.target.files?.[0]; e.target.value=''
-  if(f) await loadFile(f)
+// ── FILE LOADING ─────────────────────────────────────────────────────────────
+$('fi').addEventListener('change',async e=>{
+  const f=e.target.files?.[0];e.target.value=''
+  if(f)await loadFile(f)
 })
 
 async function loadFile(file){
   const ext=file.name.split('.').pop().toLowerCase()
-  if(!['obj','glb','gltf'].includes(ext)){ setStatus('Unsupported: .'+ext,'err'); return }
-  setStatus('Loading '+file.name+'...','load')
+  if(!['obj','glb','gltf','fbx'].includes(ext)){setSt('Unsupported: .'+ext,'err');return}
+  setSt('Loading '+file.name+'...','load')
   try{
-    const geo = await parseFile(file, ext)
-    setGeo(geo, file.name)
-    setStatus('Loaded: '+file.name,'ok')
-  }catch(e){ setStatus('Error: '+e.message,'err') }
-}
-
-function parseFile(file, ext){
-  return new Promise((res,rej)=>{
-    const rd=new FileReader()
+    let geo
     if(ext==='obj'){
-      rd.onload=e=>{try{res(parseOBJ(e.target.result))}catch(e){rej(e)}}
-      rd.onerror=()=>rej(new Error('Read failed'))
-      rd.readAsText(file)
+      const txt=await file.text()
+      geo=parseOBJ(txt)
+    }else if(ext==='fbx'){
+      const buf=await file.arrayBuffer()
+      geo=parseFBX(buf)
     }else{
-      rd.onload=e=>{try{res(parseGLB(e.target.result))}catch(e){rej(e)}}
-      rd.onerror=()=>rej(new Error('Read failed'))
-      rd.readAsArrayBuffer(file)
+      const buf=await file.arrayBuffer()
+      geo=parseGLB(buf)
     }
-  })
+    setGeo(geo,file.name)
+    setSt('Loaded: '+file.name,'ok')
+  }catch(e){setSt('Error: '+e.message,'err');console.error(e)}
 }
 
+// ── OBJ ──────────────────────────────────────────────────────────────────────
 function parseOBJ(txt){
   const vp=[],vt=[],vn=[],pi=[],ti=[],ni=[]
   for(const line of txt.split('\n')){
@@ -360,273 +407,368 @@ function parseOBJ(txt){
     if(p[0]==='vt') vt.push(+p[1],+p[2])
     if(p[0]==='vn') vn.push(+p[1],+p[2],+p[3])
     if(p[0]==='f'){
-      const vs=p.slice(1).map(s=>s.split('/').map(x=>+x-1))
+      const vs=p.slice(1).map(s=>s.split('/').map(x=>x===''?-1:+x-1))
       for(let i=1;i<vs.length-1;i++)
-        for(const v of [vs[0],vs[i],vs[i+1]]){ pi.push(v[0]); ti.push(v[1]??-1); ni.push(v[2]??-1) }
+        for(const v of[vs[0],vs[i],vs[i+1]]){pi.push(v[0]);ti.push(v[1]??-1);ni.push(v[2]??-1)}
     }
   }
+  if(!pi.length)throw new Error('No faces in OBJ')
   const n=pi.length
   const pos=new Float32Array(n*3)
   const uv=vt.length?new Float32Array(n*2):null
   const norm=vn.length?new Float32Array(n*3):null
   for(let i=0;i<n;i++){
-    const p=pi[i]; pos[i*3]=vp[p*3]; pos[i*3+1]=vp[p*3+1]; pos[i*3+2]=vp[p*3+2]
-    if(uv&&ti[i]>=0){ uv[i*2]=vt[ti[i]*2]; uv[i*2+1]=vt[ti[i]*2+1] }
-    if(norm&&ni[i]>=0){ norm[i*3]=vn[ni[i]*3]; norm[i*3+1]=vn[ni[i]*3+1]; norm[i*3+2]=vn[ni[i]*3+2] }
+    const p=pi[i]
+    pos[i*3]=vp[p*3];pos[i*3+1]=vp[p*3+1];pos[i*3+2]=vp[p*3+2]
+    if(uv&&ti[i]>=0){uv[i*2]=vt[ti[i]*2];uv[i*2+1]=vt[ti[i]*2+1]}
+    if(norm&&ni[i]>=0){norm[i*3]=vn[ni[i]*3];norm[i*3+1]=vn[ni[i]*3+1];norm[i*3+2]=vn[ni[i]*3+2]}
   }
   const geo=new THREE.BufferGeometry()
   geo.setAttribute('position',new THREE.BufferAttribute(pos,3))
-  if(uv)   geo.setAttribute('uv',new THREE.BufferAttribute(uv,2))
-  if(norm) geo.setAttribute('normal',new THREE.BufferAttribute(norm,3))
+  if(uv)geo.setAttribute('uv',new THREE.BufferAttribute(uv,2))
+  if(norm)geo.setAttribute('normal',new THREE.BufferAttribute(norm,3))
   else geo.computeVertexNormals()
   return geo
 }
 
+// ── GLB ──────────────────────────────────────────────────────────────────────
 function parseGLB(buf){
   const dv=new DataView(buf)
-  if(dv.getUint32(0,true)!==0x46546C67) throw new Error('Invalid GLB')
+  if(dv.getUint32(0,true)!==0x46546C67)throw new Error('Not a valid GLB')
   const jlen=dv.getUint32(12,true)
+  if(dv.getUint32(16,true)!==0x4E4F534A)throw new Error('Expected JSON chunk')
   const gltf=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,20,jlen)))
-  const bin=buf.slice(20+jlen+8)
+  let bin=null
+  const bOff=20+jlen
+  if(bOff+8<=buf.byteLength){
+    const blen=dv.getUint32(bOff,true)
+    if(dv.getUint32(bOff+4,true)===0x004E4942&&blen>0) bin=buf.slice(bOff+8,bOff+8+blen)
+  }
+  function getBuf(bvIdx){
+    const bv=gltf.bufferViews[bvIdx]
+    const b=gltf.buffers[bv.buffer||0]
+    if(b.uri&&b.uri.startsWith('data:')){
+      const raw=atob(b.uri.split(',')[1])
+      const a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i)
+      return a.buffer
+    }
+    return bin
+  }
   function acc(idx){
     const a=gltf.accessors[idx],bv=gltf.bufferViews[a.bufferView]
     const off=(bv.byteOffset||0)+(a.byteOffset||0)
-    const nc={SCALAR:1,VEC2:2,VEC3:3,VEC4:4}[a.type]
-    const T=a.componentType===5126?Float32Array:a.componentType===5123?Uint16Array:Uint32Array
-    return new T(bin,off,a.count*nc)
+    const nc={SCALAR:1,VEC2:2,VEC3:3,VEC4:4}[a.type]||1
+    const bd=getBuf(a.bufferView)
+    switch(a.componentType){
+      case 5126:return new Float32Array(bd,off,a.count*nc)
+      case 5125:return new Uint32Array(bd,off,a.count*nc)
+      case 5123:return new Uint16Array(bd,off,a.count*nc)
+      default:return new Float32Array(bd,off,a.count*nc)
+    }
   }
-  const prim=gltf.meshes[0].primitives[0]
+  if(!gltf.meshes?.length)throw new Error('No meshes in GLB')
+  let prim=null
+  outer:for(const m of gltf.meshes)for(const p of m.primitives){if(p.attributes.POSITION!=null){prim=p;break outer}}
+  if(!prim)throw new Error('No valid primitive')
   const geo=new THREE.BufferGeometry()
   geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.POSITION)),3))
-  if(prim.attributes.NORMAL!=null)    geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.NORMAL)),3))
-  if(prim.attributes.TEXCOORD_0!=null) geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.TEXCOORD_0)),2))
-  if(prim.indices!=null) geo.setIndex(new THREE.BufferAttribute(new Uint32Array(acc(prim.indices)),1))
-  if(!prim.attributes.NORMAL) geo.computeVertexNormals()
+  if(prim.attributes.NORMAL!=null)geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.NORMAL)),3))
+  if(prim.attributes.TEXCOORD_0!=null)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(acc(prim.attributes.TEXCOORD_0)),2))
+  if(prim.indices!=null)geo.setIndex(new THREE.BufferAttribute(new Uint32Array(acc(prim.indices)),1))
+  if(!prim.attributes.NORMAL)geo.computeVertexNormals()
   return geo
 }
 
-function setGeo(geo, name){
-  geo.computeBoundingBox()
-  const c=new THREE.Vector3(); geo.boundingBox.getCenter(c); geo.translate(-c.x,-c.y,-c.z)
-  const sz=new THREE.Vector3(); geo.boundingBox.getSize(sz)
-  const m=Math.max(sz.x,sz.y,sz.z); if(m>0){const f=2/m;geo.scale(f,f,f)}
-  if(meshObj){ scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose() }
-  mat=new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.65,metalness:.08,side:THREE.DoubleSide})
-  meshObj=new THREE.Mesh(geo,mat); scene.add(meshObj)
-  S.mesh=geo; S.name=name; S.uvs=!!geo.attributes.uv
-  OC.reset()
-  $('no-mesh').style.display='none'
-  $('drop-hint').style.display='none'
-  $('btn-unwrap').disabled=false
-  $('btn-reset').style.display=''
-  $('i-file').textContent=name
-  $('i-verts').textContent=geo.attributes.position.count.toLocaleString()
-  $('i-tris').textContent=Math.round((geo.index?geo.index.count:geo.attributes.position.count)/3).toLocaleString()
-  refreshUVInfo(); drawWire(); drawChecker()
+// ── FBX ──────────────────────────────────────────────────────────────────────
+function parseFBX(buf){
+  // Detect binary vs ASCII
+  const head=new Uint8Array(buf,0,Math.min(20,buf.byteLength))
+  const headStr=String.fromCharCode(...head)
+  if(headStr.startsWith('Kaydara FBX Binary')){
+    return parseFBXBinary(buf)
+  }else{
+    return parseFBXASCII(new TextDecoder().decode(buf))
+  }
 }
 
-// ─── UV UNWRAP — cube projection + island packing ─────────────────────
+function parseFBXBinary(buf){
+  const dv=new DataView(buf)
+  const ver=dv.getUint32(23,true)
+  const is64=ver>=7500
+  const nullSz=is64?25:13
+  let off=27
+
+  function ru32(){const v=dv.getUint32(off,true);off+=4;return v}
+  function ru64lo(){const v=dv.getUint32(off,true);off+=8;return v} // skip high 32
+  function ri32(){const v=dv.getInt32(off,true);off+=4;return v}
+  function rf32(){const v=dv.getFloat32(off,true);off+=4;return v}
+  function rf64(){const v=dv.getFloat64(off,true);off+=8;return v}
+  function rStr(n){const s=new TextDecoder().decode(new Uint8Array(buf,off,n));off+=n;return s}
+  function rByte(){return dv.getUint8(off++)}
+
+  function rArr(esz,Ctor){
+    const cnt=ru32(),enc=ru32(),clen=ru32()
+    if(enc===0){
+      const a=new Ctor(buf,off,cnt)
+      off+=cnt*esz
+      return a
+    }else{
+      // zlib compressed
+      if(typeof pako==='undefined')throw new Error('pako not loaded - cannot decompress FBX arrays')
+      const comp=new Uint8Array(buf,off,clen);off+=clen
+      const raw=pako.inflate(comp)
+      return new Ctor(raw.buffer,0,cnt)
+    }
+  }
+
+  function rProp(){
+    const t=String.fromCharCode(rByte())
+    switch(t){
+      case 'C':return rByte()
+      case 'Y':{const v=dv.getInt16(off,true);off+=2;return v}
+      case 'I':return ri32()
+      case 'F':return rf32()
+      case 'D':return rf64()
+      case 'L':{const v=ri32();off+=4;return v} // skip high 32
+      case 'S':{const n=ru32();return rStr(n)}
+      case 'R':{const n=ru32();off+=n;return null}
+      case 'f':return rArr(4,Float32Array)
+      case 'd':return rArr(8,Float64Array)
+      case 'i':return rArr(4,Int32Array)
+      case 'l':{const cnt=ru32(),enc=ru32(),clen=ru32();off+=(enc===0?cnt*8:clen);return null}
+      case 'b':return rArr(1,Uint8Array)
+      default:throw new Error('Unknown FBX prop type: '+t)
+    }
+  }
+
+  function rNode(){
+    const endOff=is64?ru64lo():ru32()
+    const numP=is64?ru64lo():ru32()
+    is64?ru64lo():ru32() // propListLen
+    const nLen=rByte()
+    if(endOff===0&&numP===0&&nLen===0){return null}
+    const name=rStr(nLen)
+    const props=[]
+    for(let i=0;i<numP;i++){try{props.push(rProp())}catch(e){props.push(null)}}
+    const children=[]
+    while(off<endOff-nullSz){
+      const c=rNode();if(!c)break;children.push(c)
+    }
+    off=endOff
+    return{name,props,children}
+  }
+
+  const roots=[]
+  while(off<buf.byteLength-nullSz){
+    try{const n=rNode();if(!n)break;roots.push(n)}catch(e){break}
+  }
+
+  // Find Objects → Geometry with type Mesh
+  const objs=roots.find(n=>n.name==='Objects')
+  if(!objs)throw new Error('No Objects node in FBX')
+
+  const geoNode=objs.children.find(n=>n.name==='Geometry'&&n.props[2]==='Mesh')
+  if(!geoNode)throw new Error('No Mesh geometry in FBX')
+
+  const vNode=geoNode.children.find(n=>n.name==='Vertices')
+  const pNode=geoNode.children.find(n=>n.name==='PolygonVertexIndex')
+  if(!vNode?.props[0])throw new Error('No vertices in FBX geometry')
+  if(!pNode?.props[0])throw new Error('No polygon indices in FBX geometry')
+
+  return buildGeoFromFBXData(Array.from(vNode.props[0]),Array.from(pNode.props[0]))
+}
+
+function parseFBXASCII(txt){
+  // Extract vertices
+  const vm=txt.match(/Vertices:\s*\*\d+\s*\{[^}]*a:\s*([^}]+)\}/)
+  const pm=txt.match(/PolygonVertexIndex:\s*\*\d+\s*\{[^}]*a:\s*([^}]+)\}/)
+  if(!vm||!pm)throw new Error('Could not parse ASCII FBX - try exporting as Binary FBX')
+  const verts=vm[1].trim().replace(/\s+/g,'').split(',').map(Number)
+  const pidx=pm[1].trim().replace(/\s+/g,'').split(',').map(Number)
+  return buildGeoFromFBXData(verts,pidx)
+}
+
+function buildGeoFromFBXData(verts,pidx){
+  // Decode polygons (negative index = -(i+1) marks last vert of polygon)
+  const polys=[],cur=[]
+  for(const i of pidx){
+    if(i<0){cur.push(-(i+1));polys.push([...cur]);cur.length=0}
+    else cur.push(i)
+  }
+  // Fan triangulate
+  const triV=[]
+  for(const p of polys)
+    for(let i=1;i<p.length-1;i++)triV.push(p[0],p[i],p[i+1])
+  const n=triV.length
+  const pos=new Float32Array(n*3)
+  for(let i=0;i<n;i++){
+    const vi=triV[i]
+    pos[i*3]=verts[vi*3];pos[i*3+1]=verts[vi*3+1];pos[i*3+2]=verts[vi*3+2]
+  }
+  const geo=new THREE.BufferGeometry()
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3))
+  geo.computeVertexNormals()
+  return geo
+}
+
+// ── SET GEOMETRY ─────────────────────────────────────────────────────────────
+function setGeo(geo,name){
+  geo.computeBoundingBox()
+  const c=new THREE.Vector3();geo.boundingBox.getCenter(c);geo.translate(-c.x,-c.y,-c.z)
+  const sz=new THREE.Vector3();geo.boundingBox.getSize(sz)
+  const m=Math.max(sz.x,sz.y,sz.z);if(m>0){const f=2/m;geo.scale(f,f,f)}
+  if(meshObj){scene.remove(meshObj);meshObj.geometry.dispose();meshObj.material?.dispose()}
+  mat=new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.65,metalness:.08,side:THREE.DoubleSide})
+  meshObj=new THREE.Mesh(geo,mat);scene.add(meshObj)
+  S.mesh=geo;S.name=name;S.uvs=!!geo.attributes.uv
+  OC.reset()
+  $('nmh').style.display='none';$('dh').style.display='none'
+  $('buw').disabled=false;$('brs').style.display=''
+  $('ifl').textContent=name;$('ivt').textContent=geo.attributes.position.count.toLocaleString()
+  $('itr').textContent=Math.round((geo.index?geo.index.count:geo.attributes.position.count)/3).toLocaleString()
+  refreshUVI();drawWire();drawChecker()
+}
+
+// ── UV UNWRAP — BFS island detection + per-island planar project + shelf pack
 function doUnwrap(){
-  if(!S.mesh) return
-  setStatus('Unwrapping...','load')
-  $('btn-unwrap').disabled=true
+  if(!S.mesh)return
+  setSt('Unwrapping...','load');$('buw').disabled=true
   setTimeout(()=>{
     try{
-      const geo = S.mesh
-      const pos = geo.attributes.position
-      const idx = geo.index
+      const geo=S.mesh,pos=geo.attributes.position,idx=geo.index
+      const vx=i=>pos.getX(i),vy=i=>pos.getY(i),vz=i=>pos.getZ(i)
+      const tris=[]
+      if(idx){for(let i=0;i<idx.count;i+=3)tris.push([idx.getX(i),idx.getX(i+1),idx.getX(i+2)])}
+      else{for(let i=0;i<pos.count;i+=3)tris.push([i,i+1,i+2])}
+      const T=tris.length
+      if(!T)throw new Error('No triangles')
 
-      // Build triangle list (vertex index triples)
-      const tris = []
-      if(idx){
-        for(let i=0;i<idx.count;i+=3) tris.push([idx.getX(i),idx.getX(i+1),idx.getX(i+2)])
-      } else {
-        for(let i=0;i<pos.count;i+=3) tris.push([i,i+1,i+2])
+      // Per-tri normals
+      const tnx=new Float32Array(T),tny=new Float32Array(T),tnz=new Float32Array(T)
+      for(let i=0;i<T;i++){
+        const[a,b,c]=tris[i]
+        const ax=vx(a),ay=vy(a),az=vz(a)
+        const bx=vx(b)-ax,by=vy(b)-ay,bz=vz(b)-az
+        const cx=vx(c)-ax,cy=vy(c)-ay,cz=vz(c)-az
+        let nx=by*cz-bz*cy,ny=bz*cx-bx*cz,nz=bx*cy-by*cx
+        const l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1
+        tnx[i]=nx/l;tny[i]=ny/l;tnz[i]=nz/l
       }
 
-      // For each triangle compute face normal
-      const v0=new THREE.Vector3(), v1=new THREE.Vector3(), v2=new THREE.Vector3()
-      const e1=new THREE.Vector3(), e2=new THREE.Vector3(), fn=new THREE.Vector3()
+      // Edge adjacency
+      const edgeMap=new Map()
+      for(let i=0;i<T;i++){
+        const[a,b,c]=tris[i]
+        for(const[ea,eb]of[[a,b],[b,c],[c,a]]){
+          const k=Math.min(ea,eb)+'_'+Math.max(ea,eb)
+          if(!edgeMap.has(k))edgeMap.set(k,[])
+          edgeMap.get(k).push(i)
+        }
+      }
 
-      // 6 axis buckets: +X -X +Y -Y +Z -Z
-      // Each bucket: array of { triIdx, verts:[{vi,x,y,z},...] }
-      const buckets = [[],[],[],[],[],[]]
-
-      tris.forEach((tri,ti)=>{
-        v0.set(pos.getX(tri[0]),pos.getY(tri[0]),pos.getZ(tri[0]))
-        v1.set(pos.getX(tri[1]),pos.getY(tri[1]),pos.getZ(tri[1]))
-        v2.set(pos.getX(tri[2]),pos.getY(tri[2]),pos.getZ(tri[2]))
-        e1.subVectors(v1,v0); e2.subVectors(v2,v0)
-        fn.crossVectors(e1,e2).normalize()
-
-        // Pick dominant axis
-        const ax=Math.abs(fn.x), ay=Math.abs(fn.y), az=Math.abs(fn.z)
-        let bucket
-        if(ax>=ay&&ax>=az) bucket = fn.x>0?0:1
-        else if(ay>=ax&&ay>=az) bucket = fn.y>0?2:3
-        else bucket = fn.z>0?4:5
-
-        buckets[bucket].push({
-          tri,
-          verts:[
-            {vi:tri[0],x:pos.getX(tri[0]),y:pos.getY(tri[0]),z:pos.getZ(tri[0])},
-            {vi:tri[1],x:pos.getX(tri[1]),y:pos.getY(tri[1]),z:pos.getZ(tri[1])},
-            {vi:tri[2],x:pos.getX(tri[2]),y:pos.getY(tri[2]),z:pos.getZ(tri[2])},
-          ]
-        })
-      })
-
-      // Project each bucket onto its plane, collect islands
-      // Axis projections: +X/-X → (z,y), +Y/-Y → (x,z), +Z/-Z → (x,y)
-      const projAxes = [
-        (v)=>[v.z, v.y],  // +X
-        (v)=>[-v.z, v.y], // -X
-        (v)=>[v.x, v.z],  // +Y
-        (v)=>[v.x,-v.z],  // -Y
-        (v)=>[v.x, v.y],  // +Z
-        (v)=>[-v.x, v.y], // -Z
-      ]
-
-      // Islands: each island has a list of {vi, u, v} and its bounding box
-      const islands = []
-
-      buckets.forEach((bucket,bi)=>{
-        if(!bucket.length) return
-        const proj = projAxes[bi]
-        const pts = [] // {vi, pu, pv}
-
-        bucket.forEach(f=>{
-          f.verts.forEach(v=>{
-            const [pu,pv]=proj(v)
-            pts.push({vi:v.vi, pu, pv})
-          })
-        })
-
-        // Normalize this island to [0,1]
-        let minU=Infinity,maxU=-Infinity,minV=Infinity,maxV=-Infinity
-        pts.forEach(p=>{ minU=Math.min(minU,p.pu); maxU=Math.max(maxU,p.pu); minV=Math.min(minV,p.pv); maxV=Math.max(maxV,p.pv) })
-        const rangeU=maxU-minU||1, rangeV=maxV-minV||1
-        const aspect=rangeU/rangeV
-
-        const localPts = pts.map(p=>({
-          vi:p.vi,
-          lu:(p.pu-minU)/rangeU,
-          lv:(p.pv-minV)/rangeV
-        }))
-
-        islands.push({ pts:localPts, aspect, triCount:bucket.length })
-      })
-
-      // ── Pack islands into UV space ──
-      // Shelf packing: sort by height desc, place left-to-right with padding
-      const PAD = 0.01
-      const totalTris = tris.length
-
-      // Weight each island size by its triangle count
-      islands.sort((a,b)=>b.triCount-a.triCount)
-
-      // Assign each island a slot in a 3×2 or flexible grid
-      // Simple row-based packing
-      const n = islands.length
-      if(n===0){ setStatus('No triangles found','err'); $('btn-unwrap').disabled=false; return }
-
-      // Determine grid cols/rows
-      const cols = Math.ceil(Math.sqrt(n*1.5))
-      const rows = Math.ceil(n/cols)
-      const cellW = (1-PAD*(cols+1))/cols
-      const cellH = (1-PAD*(rows+1))/rows
-
-      // Build final UV array — needs to be non-indexed (per triangle-vertex)
-      // so we can assign different UVs to the same vertex in different islands
-      const vertCount = tris.length*3
-      const uvOut = new Float32Array(vertCount*2)
-      const newPos  = new Float32Array(vertCount*3)
-      const newNorm = geo.attributes.normal ? new Float32Array(vertCount*3) : null
-
-      // Map: triIndex → islandIndex, posInIsland
-      // We stored tris in buckets, we need to know which island each tri belongs to
-      // and where its verts land in the island's local UV
-
-      // Rebuild: for each bucket, store tri index and per-vert local UV
-      const triFinalUV = new Array(tris.length) // [{u0,v0,u1,v1,u2,v2}]
-
-      let islandIdx=0
-      buckets.forEach((bucket,bi)=>{
-        if(!bucket.length) return
-        const proj = projAxes[bi]
-
-        // Normalize
-        let minU=Infinity,maxU=-Infinity,minV=Infinity,maxV=-Infinity
-        bucket.forEach(f=>f.verts.forEach(v=>{
-          const[pu,pv]=proj(v); minU=Math.min(minU,pu); maxU=Math.max(maxU,pu); minV=Math.min(minV,pv); maxV=Math.max(maxV,pv)
-        }))
-        const rU=maxU-minU||1, rV=maxV-minV||1
-
-        // Island position in UV space
-        const col=islandIdx%cols, row=Math.floor(islandIdx/cols)
-        const offU=PAD*(col+1)+col*cellW
-        const offV=PAD*(row+1)+row*cellH
-
-        bucket.forEach(f=>{
-          const uvs=f.verts.map(v=>{
-            const[pu,pv]=proj(v)
-            return {
-              u: offU + ((pu-minU)/rU)*cellW,
-              v: offV + ((pv-minV)/rV)*cellH
+      // BFS island grouping — 45° threshold
+      const THRESH=Math.cos(45*Math.PI/180)
+      const vis=new Uint8Array(T)
+      const islands=[]
+      for(let s=0;s<T;s++){
+        if(vis[s])continue
+        const island=[],q=[s];vis[s]=1
+        while(q.length){
+          const t=q.pop();island.push(t)
+          const[a,b,c]=tris[t]
+          for(const[ea,eb]of[[a,b],[b,c],[c,a]]){
+            const k=Math.min(ea,eb)+'_'+Math.max(ea,eb)
+            for(const nb of edgeMap.get(k)||[]){
+              if(vis[nb])continue
+              if(tnx[t]*tnx[nb]+tny[t]*tny[nb]+tnz[t]*tnz[nb]>=THRESH){vis[nb]=1;q.push(nb)}
             }
-          })
-          triFinalUV[tris.indexOf(f.tri)]={u0:uvs[0].u,v0:uvs[0].v,u1:uvs[1].u,v1:uvs[1].v,u2:uvs[2].u,v2:uvs[2].v}
-        })
-        islandIdx++
+          }
+        }
+        islands.push(island)
+      }
+
+      // Per-island planar projection
+      const packed=islands.map(tl=>{
+        let nx=0,ny=0,nz=0
+        for(const t of tl){nx+=tnx[t];ny+=tny[t];nz+=tnz[t]}
+        const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nx/=nl;ny/=nl;nz/=nl
+        // tangent
+        let tx,ty,tz
+        if(Math.abs(ny)<.99){tx=0;ty=1;tz=0}else{tx=1;ty=0;tz=0}
+        const d=tx*nx+ty*ny+tz*nz;tx-=d*nx;ty-=d*ny;tz-=d*nz
+        const tl2=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl2;ty/=tl2;tz/=tl2
+        const bx=ny*tz-nz*ty,by=nz*tx-nx*tz,bz=nx*ty-ny*tx
+        const pts=[];let minU=Infinity,maxU=-Infinity,minV=Infinity,maxV=-Infinity
+        for(const t of tl){
+          for(let k=0;k<3;k++){
+            const vi=tris[t][k]
+            const u=vx(vi)*tx+vy(vi)*ty+vz(vi)*tz
+            const v=vx(vi)*bx+vy(vi)*by+vz(vi)*bz
+            pts.push({t,k,u,v})
+            if(u<minU)minU=u;if(u>maxU)maxU=u;if(v<minV)minV=v;if(v>maxV)maxV=v
+          }
+        }
+        const rU=maxU-minU||1,rV=maxV-minV||1
+        return{tl,pts:pts.map(p=>({t:p.t,k:p.k,lu:(p.u-minU)/rU,lv:(p.v-minV)/rV})),w:rU,h:rV}
       })
+
+      // Shelf pack
+      const PAD=.008
+      packed.sort((a,b)=>b.h-a.h)
+      const tot=packed.reduce((s,i)=>s+i.w*i.h,0)||1
+      let sc=Math.sqrt(.85/tot)
+      function pack(scale){
+        let cx=PAD,cy=PAD,sh=0;const r=[]
+        for(const isl of packed){
+          const w=isl.w*scale,h=isl.h*scale
+          if(cx+w+PAD>1){cx=PAD;cy+=sh+PAD;sh=0}
+          r.push({isl,ox:cx,oy:cy,sw:w,sh:h});cx+=w+PAD;sh=Math.max(sh,h)
+        }
+        return r
+      }
+      let placed=pack(sc)
+      const my=placed.reduce((m,p)=>Math.max(m,p.oy+p.sh),0)
+      if(my>1){sc=sc*(1/my)*.95;placed=pack(sc)}
+
+      // Build final UV table
+      const triUV=Array.from({length:T},()=>[[0,0],[0,0],[0,0]])
+      for(const{isl,ox,oy,sw,sh}of placed)
+        for(const{t,k,lu,lv}of isl.pts)triUV[t][k]=[ox+lu*sw,oy+lv*sh]
 
       // Build non-indexed geometry
-      const origNorm = geo.attributes.normal
-      tris.forEach((tri,ti)=>{
-        const fuv=triFinalUV[ti]||{u0:.5,v0:.5,u1:.5,v1:.5,u2:.5,v2:.5}
-        const uvPairs=[[fuv.u0,fuv.v0],[fuv.u1,fuv.v1],[fuv.u2,fuv.v2]]
-        tri.forEach((vi,k)=>{
-          const base=(ti*3+k)
-          newPos[base*3]  =pos.getX(vi)
-          newPos[base*3+1]=pos.getY(vi)
-          newPos[base*3+2]=pos.getZ(vi)
-          uvOut[base*2]  =uvPairs[k][0]
-          uvOut[base*2+1]=uvPairs[k][1]
-          if(newNorm&&origNorm){
-            newNorm[base*3]  =origNorm.getX(vi)
-            newNorm[base*3+1]=origNorm.getY(vi)
-            newNorm[base*3+2]=origNorm.getZ(vi)
-          }
-        })
-      })
-
-      const newGeo=new THREE.BufferGeometry()
-      newGeo.setAttribute('position',new THREE.BufferAttribute(newPos,3))
-      newGeo.setAttribute('uv',new THREE.BufferAttribute(uvOut,2))
-      if(newNorm) newGeo.setAttribute('normal',new THREE.BufferAttribute(newNorm,3))
-      else newGeo.computeVertexNormals()
-
-      // Replace mesh geometry
-      S.mesh=newGeo
-      if(meshObj){ meshObj.geometry.dispose(); meshObj.geometry=newGeo }
-
-      S.uvs=true
-      refreshUVInfo(); drawWire(); drawChecker()
-      setStatus(`Unwrapped — ${n} islands`,'ok')
-      setView('uv')
-    }catch(e){ setStatus('Unwrap failed: '+e.message,'err'); console.error(e) }
-    $('btn-unwrap').disabled=false
+      const vc=T*3,newPos=new Float32Array(vc*3),newUV=new Float32Array(vc*2)
+      const origN=geo.attributes.normal,newN=origN?new Float32Array(vc*3):null
+      for(let t=0;t<T;t++){
+        for(let k=0;k<3;k++){
+          const vi=tris[t][k],b=t*3+k
+          newPos[b*3]=vx(vi);newPos[b*3+1]=vy(vi);newPos[b*3+2]=vz(vi)
+          newUV[b*2]=triUV[t][k][0];newUV[b*2+1]=triUV[t][k][1]
+          if(newN&&origN){newN[b*3]=origN.getX(vi);newN[b*3+1]=origN.getY(vi);newN[b*3+2]=origN.getZ(vi)}
+        }
+      }
+      const ng=new THREE.BufferGeometry()
+      ng.setAttribute('position',new THREE.BufferAttribute(newPos,3))
+      ng.setAttribute('uv',new THREE.BufferAttribute(newUV,2))
+      if(newN)ng.setAttribute('normal',new THREE.BufferAttribute(newN,3))
+      else ng.computeVertexNormals()
+      if(meshObj){meshObj.geometry.dispose();meshObj.geometry=ng}
+      S.mesh=ng;S.uvs=true
+      refreshUVI();drawWire();drawChecker()
+      setSt(`Unwrapped — ${islands.length} islands`,'ok');setView('uv')
+    }catch(e){setSt('Unwrap failed: '+e.message,'err');console.error(e)}
+    $('buw').disabled=false
   },30)
 }
 
-// ─── UV EDITOR ────────────────────────────────────────────────────────
-let uvZ=1, uvPan={x:0,y:0}, uvPainting=false, uvPanning=false, uvLast=null, uvPS=null
+// ── UV EDITOR ────────────────────────────────────────────────────────────────
+let uvZ=1,uvPan={x:0,y:0},uvPainting=false,uvPanning=false,uvLast=null,uvPS=null
+let gradStart=null
 
 function drawChecker(){
-  for(const id of ['cc','cc-s']){
-    const cv=$(id); if(!cv) continue
+  for(const id of['cc','cc2']){
+    const cv=$(id);if(!cv)continue
     const ctx=cv.getContext('2d')
-    for(let r=0;r<UV/32;r++) for(let c=0;c<UV/32;c++){
+    for(let r=0;r<UV/32;r++)for(let c=0;c<UV/32;c++){
       ctx.fillStyle=(r+c)%2===0?'#1a1a1a':'#141414'
       ctx.fillRect(c*32,r*32,32,32)
     }
@@ -634,174 +776,330 @@ function drawChecker(){
 }
 
 function drawWire(){
-  for(const id of ['wc','wc-s']){
-    const cv=$(id); if(!cv) continue
-    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,UV,UV)
-    if(!S.mesh||!S.mesh.attributes.uv) continue
+  for(const id of['wc','wc2']){
+    const cv=$(id);if(!cv)continue
+    const ctx=cv.getContext('2d');ctx.clearRect(0,0,UV,UV)
+    if(!S.mesh?.attributes.uv)continue
     const uv=S.mesh.attributes.uv,idx=S.mesh.index
-    ctx.strokeStyle='rgba(0,229,255,.65)'; ctx.lineWidth=0.7
-    ctx.beginPath()
+    ctx.strokeStyle='rgba(0,229,255,.7)';ctx.lineWidth=.8;ctx.beginPath()
     const tri=(a,b,c)=>{
       ctx.moveTo(uv.getX(a)*UV,(1-uv.getY(a))*UV)
       ctx.lineTo(uv.getX(b)*UV,(1-uv.getY(b))*UV)
-      ctx.lineTo(uv.getX(c)*UV,(1-uv.getY(c))*UV)
-      ctx.closePath()
+      ctx.lineTo(uv.getX(c)*UV,(1-uv.getY(c))*UV);ctx.closePath()
     }
     if(idx){for(let i=0;i<idx.count;i+=3)tri(idx.getX(i),idx.getX(i+1),idx.getX(i+2))}
     else{for(let i=0;i<uv.count;i+=3)tri(i,i+1,i+2)}
     ctx.stroke()
   }
-  $('no-uv').style.display='none'
-  $('split-no-uv').style.display='none'
+  $('nuv').style.display='none';$('spnuv').style.display='none'
 }
 
 function uvXform(){
-  for(const[sid,aid,zid]of[['uvstage','uvarea','uvzoom'],['split-uvstage','split-uvarea','uvzoom-s']]){
-    const st=$(sid),ar=$(aid),zl=$(zid); if(!st||!ar) continue
+  for(const[sid,aid,zid]of[['uvs','uva','uvz'],['spuvs','spuva','spuvz']]){
+    const st=$(sid),ar=$(aid),zl=$(zid);if(!st||!ar)continue
     const w=ar.clientWidth,h=ar.clientHeight
     st.style.transform=`translate(${w/2-UV*uvZ/2+uvPan.x}px,${h/2-UV*uvZ/2+uvPan.y}px) scale(${uvZ})`
-    if(zl) zl.textContent='ZOOM '+Math.round(uvZ*100)+'%'
+    if(zl)zl.textContent=Math.round(uvZ*100)+'%'
   }
 }
 
-function uvGetPos(e, stageId){
-  const st=$(stageId); if(!st) return{x:0,y:0}
+function uvPos(e,sid){
+  const st=$(sid);if(!st)return{x:0,y:0}
   const r=st.getBoundingClientRect()
   return{x:(e.clientX-r.left)*(UV/r.width),y:(e.clientY-r.top)*(UV/r.height)}
 }
 
-function uvDoPaint(e, isSplit){
-  const pcId=isSplit?'pc-s':'pc', mId=isSplit?'pc':'pc-s', stId=isSplit?'split-uvstage':'uvstage'
-  const cv=$(pcId); if(!cv) return
-  const ctx=cv.getContext('2d'), pos=uvGetPos(e,stId)
-  ctx.globalCompositeOperation=S.mode==='erase'?'destination-out':'source-over'
-  ctx.strokeStyle=S.color; ctx.lineWidth=S.brush; ctx.lineCap='round'; ctx.lineJoin='round'
-  if(uvLast){ctx.beginPath();ctx.moveTo(uvLast.x,uvLast.y);ctx.lineTo(pos.x,pos.y);ctx.stroke()}
-  else{ctx.beginPath();ctx.arc(pos.x,pos.y,S.brush/2,0,Math.PI*2);ctx.fillStyle=S.mode==='erase'?'rgba(0,0,0,1)':S.color;ctx.fill()}
-  uvLast=pos
-  const m=$(mId); if(m){const mc=m.getContext('2d');mc.clearRect(0,0,UV,UV);mc.drawImage(cv,0,0)}
+// ── TOOLS ────────────────────────────────────────────────────────────────────
+
+function hexToRGB(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16)
+  return[r,g,b]
+}
+
+function stampBrush(ctx,x,y){
+  const r=S.brush/2
+  ctx.save()
+  ctx.globalCompositeOperation=S.tool==='erase'?'destination-out':'source-over'
+  if(S.hard>=.99){
+    ctx.globalAlpha=S.opacity
+    ctx.fillStyle=S.color
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()
+  }else{
+    const innerR=r*S.hard
+    const g=ctx.createRadialGradient(x,y,innerR,x,y,r)
+    const[cr,cg,cb]=hexToRGB(S.color)
+    g.addColorStop(0,`rgba(${cr},${cg},${cb},${S.opacity})`)
+    g.addColorStop(1,`rgba(${cr},${cg},${cb},0)`)
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()
+  }
+  ctx.restore()
+}
+
+function strokeBrush(ctx,from,to){
+  const steps=Math.ceil(Math.max(Math.abs(to.x-from.x),Math.abs(to.y-from.y))/(S.brush*.3))+1
+  for(let i=0;i<=steps;i++){
+    const t=i/steps
+    stampBrush(ctx,from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)
+  }
+}
+
+function floodFill(ctx,startX,startY){
+  startX=Math.round(startX);startY=Math.round(startY)
+  if(startX<0||startX>=UV||startY<0||startY>=UV)return
+  const img=ctx.getImageData(0,0,UV,UV),d=img.data
+  const[fr,fg,fb]=hexToRGB(S.color),fa=Math.round(S.opacity*255)
+  const si=(startY*UV+startX)*4
+  const tr=d[si],tg=d[si+1],tb=d[si+2],ta=d[si+3]
+  if(fr===tr&&fg===tg&&fb===tb&&fa===ta)return
+  const stk=[startX,startY]
+  while(stk.length){
+    const y=stk.pop(),x=stk.pop()
+    if(x<0||x>=UV||y<0||y>=UV)continue
+    const i=(y*UV+x)*4
+    if(d[i]!==tr||d[i+1]!==tg||d[i+2]!==tb||d[i+3]!==ta)continue
+    d[i]=fr;d[i+1]=fg;d[i+2]=fb;d[i+3]=fa
+    stk.push(x+1,y,x-1,y,x,y+1,x,y-1)
+  }
+  ctx.putImageData(img,0,0)
+}
+
+function eyedrop(ctx,x,y){
+  const d=ctx.getImageData(Math.round(x),Math.round(y),1,1).data
+  if(d[3]<10)return // transparent pixel - don't pick
+  const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('')
+  setCol(hex)
+  setTool('paint') // auto-switch back to paint
+}
+
+function drawGradient(ctx,from,to){
+  ctx.save()
+  ctx.globalCompositeOperation='source-over'
+  const g=ctx.createLinearGradient(from.x,from.y,to.x,to.y)
+  const[r,gv,b]=hexToRGB(S.color)
+  const[r2,g2,b2]=hexToRGB(S.col2)
+  g.addColorStop(0,`rgba(${r},${gv},${b},${S.opacity})`)
+  g.addColorStop(1,`rgba(${r2},${g2},${b2},${S.opacity})`)
+  ctx.fillStyle=g;ctx.fillRect(0,0,UV,UV)
+  ctx.restore()
+}
+
+function uvDo(e,isSplit){
+  const pcId=isSplit?'pc2':'pc',mId=isSplit?'pc':'pc2',sid=isSplit?'spuvs':'uvs'
+  const cv=$(pcId);if(!cv)return
+  const ctx=cv.getContext('2d'),p=uvPos(e,sid)
+
+  if(S.tool==='paint'||S.tool==='erase'){
+    if(uvLast)strokeBrush(ctx,uvLast,p)
+    else stampBrush(ctx,p.x,p.y)
+    uvLast=p
+  }
+
+  mirrorAndApply(cv,mId)
+}
+
+function mirrorAndApply(cv,mId){
+  const m=$(mId)
+  if(m){const mc=m.getContext('2d');mc.clearRect(0,0,UV,UV);mc.drawImage(cv,0,0)}
   applyTex(cv)
 }
 
-function setupUVArea(areaId, stageId, isSplit){
-  const ar=$(areaId); if(!ar) return
+function setupUVArea(areaId,stageId,isSplit){
+  const ar=$(areaId);if(!ar)return
+
   ar.addEventListener('mousedown',e=>{
     if(e.button===1||e.altKey){uvPanning=true;uvPS={x:e.clientX-uvPan.x,y:e.clientY-uvPan.y};return}
-    uvPainting=true;uvLast=null;uvDoPaint(e,isSplit)
+
+    const sid=isSplit?'spuvs':'uvs'
+    const cv=$(isSplit?'pc2':'pc');if(!cv)return
+    const p=uvPos(e,sid)
+
+    if(S.tool==='fill'){
+      floodFill(cv.getContext('2d'),p.x,p.y)
+      mirrorAndApply(cv,isSplit?'pc':'pc2')
+    }else if(S.tool==='pick'){
+      eyedrop(cv.getContext('2d'),p.x,p.y)
+    }else if(S.tool==='grad'){
+      gradStart=p
+    }else{
+      uvPainting=true;uvLast=null;uvDo(e,isSplit)
+    }
   })
+
   ar.addEventListener('mousemove',e=>{
     if(uvPanning&&uvPS){uvPan={x:e.clientX-uvPS.x,y:e.clientY-uvPS.y};uvXform();return}
-    if(uvPainting)uvDoPaint(e,isSplit)
+    if(S.tool==='grad'&&gradStart){
+      // draw preview line on overlay canvas
+      const gp=$('grad-prev')
+      if(gp){
+        const sid=isSplit?'spuvs':'uvs',p=uvPos(e,sid)
+        const st=$(sid),sr=st.getBoundingClientRect(),ar2=$(areaId),ar2r=ar2.getBoundingClientRect()
+        gp.style.display='block'
+        gp.width=ar2.clientWidth;gp.height=ar2.clientHeight
+        const ctx=gp.getContext('2d');ctx.clearRect(0,0,gp.width,gp.height)
+        const ox=sr.left-ar2r.left,oy=sr.top-ar2r.top
+        const sx=gradStart.x*(sr.width/UV)+ox,sy=gradStart.y*(sr.height/UV)+oy
+        const ex=p.x*(sr.width/UV)+ox,ey=p.y*(sr.height/UV)+oy
+        ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1;ctx.setLineDash([4,4])
+        ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke()
+        ctx.setLineDash([])
+        ctx.fillStyle=S.color;ctx.beginPath();ctx.arc(sx,sy,5,0,Math.PI*2);ctx.fill()
+        ctx.fillStyle=S.col2;ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fill()
+      }
+    }
+    if(uvPainting)uvDo(e,isSplit)
   })
-  ar.addEventListener('mouseup',()=>{uvPainting=false;uvPanning=false;uvLast=null})
+
+  ar.addEventListener('mouseup',e=>{
+    if(uvPanning){uvPanning=false;return}
+    if(S.tool==='grad'&&gradStart){
+      const sid=isSplit?'spuvs':'uvs',p=uvPos(e,sid)
+      const cv=$(isSplit?'pc2':'pc')
+      if(cv){drawGradient(cv.getContext('2d'),gradStart,p);mirrorAndApply(cv,isSplit?'pc':'pc2')}
+      gradStart=null
+      const gp=$('grad-prev');if(gp){gp.style.display='none';gp.getContext('2d').clearRect(0,0,gp.width,gp.height)}
+    }
+    uvPainting=false;uvPanning=false;uvLast=null
+    // push color to history
+    pushHistory(S.color)
+  })
+
   ar.addEventListener('mouseleave',()=>{uvPainting=false;uvPanning=false;uvLast=null})
-  ar.addEventListener('wheel',e=>{e.preventDefault();uvZ=Math.max(.2,Math.min(10,uvZ-e.deltaY*.001));uvXform()},{passive:false})
+  ar.addEventListener('wheel',e=>{e.preventDefault();uvZ=Math.max(.1,Math.min(16,uvZ-e.deltaY*.001));uvXform()},{passive:false})
 }
 
 function applyTex(cv){
-  if(!mat) return
-  const t=new THREE.CanvasTexture(cv); t.flipY=false
-  mat.map=t; mat.color.set(0xffffff); mat.needsUpdate=true
+  if(!mat)return
+  const t=new THREE.CanvasTexture(cv);t.flipY=false
+  mat.map=t;mat.color.set(0xffffff);mat.needsUpdate=true
 }
 
 function uvFill(){
-  for(const id of['pc','pc-s']){
-    const cv=$(id); if(!cv) continue
-    const ctx=cv.getContext('2d'); ctx.globalCompositeOperation='source-over'
-    ctx.fillStyle=S.color; ctx.fillRect(0,0,UV,UV)
+  for(const id of['pc','pc2']){
+    const cv=$(id);if(!cv)continue
+    const ctx=cv.getContext('2d');ctx.save();ctx.globalCompositeOperation='source-over'
+    const[r,g,b]=hexToRGB(S.color)
+    ctx.fillStyle=`rgba(${r},${g},${b},${S.opacity})`;ctx.fillRect(0,0,UV,UV);ctx.restore()
+  }
+  applyTex($('pc'));pushHistory(S.color)
+}
+
+function uvClear(){
+  for(const id of['pc','pc2']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
+  if(mat){mat.map=null;mat.color.set(0xcccccc);mat.needsUpdate=true}
+}
+
+function uvFlipH(){transformPaint(ctx=>{ctx.translate(UV,0);ctx.scale(-1,1)})}
+function uvFlipV(){transformPaint(ctx=>{ctx.translate(0,UV);ctx.scale(1,-1)})}
+function transformPaint(fn){
+  for(const id of['pc','pc2']){
+    const cv=$(id);if(!cv)continue
+    const tmp=document.createElement('canvas');tmp.width=tmp.height=UV
+    const tctx=tmp.getContext('2d');tctx.save();fn(tctx);tctx.drawImage(cv,0,0);tctx.restore()
+    cv.getContext('2d').clearRect(0,0,UV,UV);cv.getContext('2d').drawImage(tmp,0,0)
   }
   applyTex($('pc'))
 }
-function uvClear(){
-  for(const id of['pc','pc-s']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
-  if(mat){mat.map=null;mat.color.set(0xcccccc);mat.needsUpdate=true}
-}
+
 function uvExport(){
-  const cv=$('pc'); if(!cv) return
+  const cv=$('pc');if(!cv)return
   const a=document.createElement('a')
   a.download=(S.name?.replace(/\.[^.]+$/,'')||'texture')+'_uv.png'
-  a.href=cv.toDataURL('image/png'); a.click()
+  a.href=cv.toDataURL('image/png');a.click()
 }
 
-// ─── VIEW SWITCHING ───────────────────────────────────────────────────
+// ── VIEW ─────────────────────────────────────────────────────────────────────
 function setView(v){
   S.view=v
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'))
-  $('v3d').classList.toggle('on',v==='3d')
-  $('vuv').classList.toggle('on',v==='uv')
-  $('vsplit').classList.toggle('on',v==='split')
-  $('bv3').classList.toggle('a',v==='3d')
-  $('bvuv').classList.toggle('a',v==='uv')
-  $('bvsp').classList.toggle('a',v==='split')
-  if(v==='split') getSplitRenderer()
+  $('v3').classList.toggle('on',v==='3d');$('vuv').classList.toggle('on',v==='uv');$('vsp').classList.toggle('on',v==='split')
+  $('b3').classList.toggle('a',v==='3d');$('buv').classList.toggle('a',v==='uv');$('bsp').classList.toggle('a',v==='split')
+  if(v==='split')getSR()
   setTimeout(uvXform,10)
 }
 
-// ─── INSPECTOR ────────────────────────────────────────────────────────
-const PAL=['#ffffff','#000000','#ff3b3b','#ff8c00','#ffb800','#39ff6e','#00e5ff','#0066ff','#9b59b6','#ff69b4','#8B4513','#888888']
-function buildPalette(){
+// ── INSPECTOR ────────────────────────────────────────────────────────────────
+const PAL=['#ffffff','#c0c0c0','#808080','#000000','#ff3b3b','#ff8c00','#ffb800','#ffd700',
+           '#39ff6e','#00cc44','#00e5ff','#0066ff','#9b59b6','#ff69b4','#8B4513','#5c3d1a']
+
+function buildPal(){
   const el=$('pal')
   PAL.forEach(c=>{
-    const b=document.createElement('button'); b.className='sw'+(c===S.color?' on':'')
-    b.style.background=c; b.title=c; b.onclick=()=>setColor(c); el.appendChild(b)
+    const b=document.createElement('button');b.className='sw'+(c===S.color?' on':'')
+    b.style.background=c;b.title=c;b.onclick=()=>setCol(c);el.appendChild(b)
   })
 }
-function setColor(c){
-  S.color=c; $('cpick').value=c; $('chex').textContent=c.toUpperCase()
+
+function setCol(c){
+  S.color=c;$('cp').value=c;$('ch').textContent=c.toUpperCase()
   document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('on',s.title===c))
 }
-function setMode(m){
-  S.mode=m
-  $('m-paint').classList.toggle('on',m==='paint')
-  $('m-erase').classList.toggle('on',m==='erase')
+
+function setTool(t){
+  S.tool=t
+  document.querySelectorAll('.tool').forEach(b=>b.classList.remove('on'))
+  $('t-'+t)?.classList.add('on')
+  // Show/hide gradient B color
+  const isGrad=t==='grad'
+  $('cr2').style.display=isGrad?'flex':'none'
+  $('grad-lbl').style.display=isGrad?'block':'none'
+  // Change cursor
+  const cursors={paint:'crosshair',erase:'cell',fill:'default',pick:'default',grad:'crosshair'}
+  $('uva').style.cursor=cursors[t]||'crosshair'
+  $('spuva').style.cursor=cursors[t]||'crosshair'
 }
-function refreshUVInfo(){
-  $('i-uvs').textContent=S.uvs?'YES':'NONE'
-  $('i-uvs').className='ival'+(S.uvs?' ok':'')
-  $('fdot').style.background=S.uvs?'var(--ok)':'var(--txt3)'
+
+function pushHistory(c){
+  if(S.colorHistory[0]===c)return
+  S.colorHistory.unshift(c);if(S.colorHistory.length>8)S.colorHistory.pop()
+  const el=$('hist');el.innerHTML=''
+  S.colorHistory.forEach(h=>{
+    const b=document.createElement('button');b.className='hc';b.style.background=h
+    b.title=h;b.onclick=()=>setCol(h);el.appendChild(b)
+  })
+}
+
+function refreshUVI(){
+  $('iuv').textContent=S.uvs?'YES':'NONE';$('iuv').className='iv'+(S.uvs?' ok':'')
+  $('fdot').style.background=S.uvs?'var(--ok)':'var(--t3)'
   $('fdot').style.boxShadow=S.uvs?'0 0 6px var(--ok)':'none'
-  $('ftxt').textContent=S.uvs?'READY':'NO UVS'
+  $('ftx').textContent=S.uvs?'READY':'NO UVS'
 }
 
-// ─── STATUS ───────────────────────────────────────────────────────────
-function setStatus(msg,type=''){
-  $('stxt').textContent=msg
-  const col={ok:'var(--ok)',load:'var(--warn)',err:'var(--err)'}[type]||'var(--txt3)'
-  $('sdot').style.background=col; $('stxt').style.color=col
-  $('sdot').style.boxShadow=type==='ok'?'0 0 6px var(--ok)':'none'
-  const sb=$('statusbar'); sb.querySelector('.spin')?.remove()
-  if(type==='load'){const sp=document.createElement('div');sp.className='spin';sb.insertBefore(sp,$('sdot'))}
+function setSt(msg,type=''){
+  $('st').textContent=msg
+  const c={ok:'var(--ok)',load:'var(--warn)',err:'var(--err)'}[type]||'var(--t3)'
+  $('sd').style.background=c;$('st').style.color=c
+  $('sd').style.boxShadow=type==='ok'?'0 0 6px var(--ok)':'none'
+  const sb=$('sb');sb.querySelector('.spin')?.remove()
+  if(type==='load'){const sp=document.createElement('div');sp.className='spin';sb.insertBefore(sp,$('sd'))}
 }
 
-// ─── RESET ────────────────────────────────────────────────────────────
 function resetAll(){
-  if(meshObj){scene.remove(meshObj);meshObj.geometry.dispose();meshObj.material.dispose();meshObj=null;mat=null}
+  if(meshObj){scene.remove(meshObj);meshObj.geometry?.dispose();meshObj.material?.dispose();meshObj=null;mat=null}
   S.mesh=null;S.name=null;S.uvs=false
-  for(const id of['pc','pc-s','wc','wc-s']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
-  $('no-mesh').style.display=''; $('drop-hint').style.display=''
-  $('btn-unwrap').disabled=true; $('btn-reset').style.display='none'
-  $('i-file').textContent='—'; $('i-verts').textContent='—'; $('i-tris').textContent='—'
-  $('no-uv').style.display=''; $('split-no-uv').style.display=''
-  refreshUVInfo(); setStatus('Drop a mesh to begin'); OC.reset(); setView('3d')
+  for(const id of['pc','pc2','wc','wc2']){const cv=$(id);if(cv)cv.getContext('2d').clearRect(0,0,UV,UV)}
+  $('nmh').style.display='';$('dh').style.display=''
+  $('buw').disabled=true;$('brs').style.display='none'
+  $('ifl').textContent='—';$('ivt').textContent='—';$('itr').textContent='—'
+  $('nuv').style.display='';$('spnuv').style.display=''
+  refreshUVI();setSt('Drop a mesh to begin');OC.reset();setView('3d')
 }
 
-// ─── DRAG & DROP ──────────────────────────────────────────────────────
-document.addEventListener('dragenter',()=>$('drop-ov').classList.add('on'))
-document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop-ov').classList.remove('on')})
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
+document.addEventListener('dragenter',()=>$('dov').classList.add('on'))
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('dov').classList.remove('on')})
 document.addEventListener('dragover',e=>e.preventDefault())
 document.addEventListener('drop',async e=>{
-  e.preventDefault(); $('drop-ov').classList.remove('on')
-  const f=e.dataTransfer.files?.[0]; if(f) await loadFile(f)
+  e.preventDefault();$('dov').classList.remove('on')
+  const f=e.dataTransfer.files?.[0];if(f)await loadFile(f)
 })
 
-// ─── INIT ─────────────────────────────────────────────────────────────
-;['cc','cc-s','pc','pc-s','wc','wc-s'].forEach(id=>{const cv=$(id);if(cv){cv.width=UV;cv.height=UV}})
-drawChecker()
-buildPalette()
-setupUVArea('uvarea','uvstage',false)
-setupUVArea('split-uvarea','split-uvstage',true)
-uvXform()
-setStatus('Drop a mesh to begin')
+// ── INIT ──────────────────────────────────────────────────────────────────────
+;['cc','cc2','pc','pc2','wc','wc2'].forEach(id=>{const cv=$(id);if(cv){cv.width=UV;cv.height=UV}})
+drawChecker();buildPal();setTool('paint')
+setupUVArea('uva','uvs',false)
+setupUVArea('spuva','spuvs',true)
+uvXform();setSt('Drop a mesh to begin')
 </script>
 </body>
 </html>
