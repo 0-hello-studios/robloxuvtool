@@ -52,7 +52,7 @@ input[type=color]{cursor:pointer;border:none;background:none;padding:0}
 
 /* 3D */
 #v3{position:relative;background:#0d0d0d}
-#c3{position:absolute;inset:0;width:100%;height:100%;display:block}
+#c3{position:absolute;top:0;left:0;display:block}
 #nmh{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
 #nmh .ico{font-size:32px;opacity:.1}
 #nmh .lb{font-family:var(--mo);font-size:10px;color:var(--t3);letter-spacing:.12em}
@@ -363,11 +363,10 @@ let meshObj=null,mat=null
 function resizeAll(){
   if(S.view==='split'&&rSplit){
     const sp=$('sp3'),ws=sp.clientWidth,hs=sp.clientHeight
-    if(ws>0&&hs>0){rSplit.setSize(ws,hs,false);cam.aspect=ws/hs;cam.updateProjectionMatrix()}
+    if(ws>0&&hs>0){rSplit.setSize(ws,hs);cam.aspect=ws/hs;cam.updateProjectionMatrix()}
   } else {
-    // Use vpa (always visible parent) so we get real dims even when v3 might be transitioning
     const vpa=$('vpa'),w=vpa.clientWidth,h=vpa.clientHeight
-    if(w>0&&h>0){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+    if(w>0&&h>0){renderer.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
   }
 }
 
